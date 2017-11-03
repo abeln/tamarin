@@ -5,7 +5,7 @@ import com.github.abeln.tamarin.SymInstr.{Instr, Trace}
 /**
   * Maps traces to other traces
   */
-abstract class TraceMap {
+abstract class TraceMap extends (Trace => Trace) {
   import TraceMap.instrToTrace
 
   protected def transform: PartialFunction[Instr, Trace]

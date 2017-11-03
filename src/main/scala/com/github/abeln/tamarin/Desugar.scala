@@ -26,5 +26,7 @@ object Desugar extends TraceMap {
       QuotU(LO, s, t),
       RemU(HI, s, t)
     )
+    case Mflo(d) => assign(d, LO)
+    case Mfhi(d) => assign(d, HI)
   }
 }

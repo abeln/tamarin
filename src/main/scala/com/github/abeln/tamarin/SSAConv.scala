@@ -56,10 +56,10 @@ object SSAConv extends TraceMap {
     f(update(d), o1, o2)
   }
 
-  private def reapply2(f: (Reg, Reg) => Instr, d: Reg, s: Operand): Instr = {
+  private def reapply2(f: (Reg, Reg) => Instr, d: Reg, s: Reg): Instr = {
     // Look-up operand before updating.
     val o1 = lookup(s)
-    f(update(d), o1)
+    f(update(d), o1.asInstanceOf[Reg])
   }
 
   override protected def transform: PartialFunction[Instr, Trace] = {
