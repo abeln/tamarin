@@ -49,6 +49,7 @@ object SymInstr {
   case class SltU(d: Reg, s: Operand, t: Operand) extends Instr
   // Since we don't track the PC symbolically, we force you to concretize it for `jalr`.
   case class Jalr(s: Reg, concretePC: Int) extends Instr
+
   // Path conditions
   case class Beq(s: Operand, t: Operand, i: Int) extends Instr with PathCond
   case class Bne(s: Operand, t: Operand, i: Int) extends Instr with PathCond
