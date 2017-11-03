@@ -2,6 +2,7 @@ package com.github.abeln.tamarin
 import collection.mutable
 import com.github.abeln.tamarin.SymInstr._
 import com.github.abeln.tamarin.TraceMap.instrToTrace
+import com.github.abeln.tamarin.Err.err
 
 /**
   * Converts traces to SSA form.
@@ -80,5 +81,6 @@ object SSAConv extends TraceMap {
     case Sw(t, o, s) => Sw(lookup(t).asInstanceOf[Reg], o, lookup(s))
     case Beq(s, t, i) => Beq(lookup(s).asInstanceOf[Reg], lookup(t), i)
     case Bne(s, t, i) => Bne(lookup(s).asInstanceOf[Reg], lookup(t), i)
+    case instr => err(s"Don't know how to SSA-convert $instr")
   }
 }
