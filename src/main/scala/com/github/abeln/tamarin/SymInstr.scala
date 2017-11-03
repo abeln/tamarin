@@ -50,6 +50,25 @@ object SymInstr {
   // Since we don't track the PC symbolically, we force you to concretize it for `jalr`.
   case class Jalr(s: Reg, concretePC: Int) extends Instr
 
+  // The following aren't MIPS instructions, but are used to desugar MIPS instructions
+  // into operations the solver can understand.
+  /** Signed product s * t, where both operands are interpreted as 64-bit (signed) ints */
+  case class Mult64(d: Reg, s: Operand, t: Operand) extends Instr
+  /** Unsigned product s * t, where both operands are interpreted as 64-bit (unsigned) ints */
+  case class MultU64(d: Reg, s: Operand, t: Operand) extends Instr
+  /** Assigns the lowest 32-bits of `s` (assumed to be 64 bits) to `d` */
+  case class Low32(d: Reg, s: Reg) extends Instr
+  /** Assigns the highest 32-bits of `s` (assumed to be 64 bits) to `d` */
+  case class High32(d: Reg, s: Reg) extends Instr
+  /** Integer division */
+  case class Quot(d: Reg, s: Operand, t: Operand) extends Instr
+  /** Unsigned integer division */
+  case class QuotU(d: Reg, s: Operand, t: Operand) extends Instr
+  /** Remainder */
+  case class Rem(d: Reg, s: Operand, t: Operand) extends Instr
+  /** Unsigned remainder */
+  case class RemU(d: Reg, s: Operand, t: Operand) extends Instr
+
   // Path conditions
   case class Beq(s: Operand, t: Operand, i: Int) extends Instr with PathCond
   case class Bne(s: Operand, t: Operand, i: Int) extends Instr with PathCond
