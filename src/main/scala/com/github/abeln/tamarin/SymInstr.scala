@@ -18,6 +18,7 @@ object SymInstr {
   val LO: Reg = freshRegister()
   val HI: Reg = freshRegister()
   val PC: Reg = freshRegister()
+  val TMP: Reg = freshRegister()
 
   private var newReg = maxReg
 
@@ -29,6 +30,7 @@ object SymInstr {
 
   /** A symbolic trace recorded while the program executed */
   type Trace = Seq[Instr]
+  def trace(is: Instr*): Trace = Seq(is: _*)
 
   /** Marker trait for path conditions */
   sealed trait PathCond
@@ -48,7 +50,7 @@ object SymInstr {
   case class Slt(d: Reg, s: Operand, t: Operand) extends Instr
   case class SltU(d: Reg, s: Operand, t: Operand) extends Instr
   // Since we don't track the PC symbolically, we force you to concretize it for `jalr`.
-  case class Jalr(s: Reg, concretePC: Int) extends Instr
+  case class Jalr(concretePC: Int) extends Instr
 
   // The following aren't MIPS instructions, but are used to desugar MIPS instructions
   // into operations the solver can understand.
@@ -68,6 +70,8 @@ object SymInstr {
   case class Rem(d: Reg, s: Operand, t: Operand) extends Instr
   /** Unsigned remainder */
   case class RemU(d: Reg, s: Operand, t: Operand) extends Instr
+
+  def assign(d: Reg, s: Operand) = Add(d, s, Lit(0))
 
   // Path conditions
   case class Beq(s: Operand, t: Operand, i: Int) extends Instr with PathCond
