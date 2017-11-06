@@ -10,15 +10,16 @@ object SymInstr {
   case class Reg(r: Int) extends Operand
   case class Lit(v: Long) extends Operand
 
-  val maxReg = 31 // there are 31 addressable registers
-  val addressable: Set[Reg] = (0 to maxReg).map(r => Reg(r)).toSet
-
   /** Special registers */
   val returnPC = Reg(31)
   val LO: Reg = freshRegister()
   val HI: Reg = freshRegister()
-  val PC: Reg = freshRegister()
   val TMP: Reg = freshRegister()
+
+  val maxReg = 31 // there are 31 addressable registers
+  val addressable: Set[Reg] = (0 to maxReg).map(r => Reg(r)).toSet
+  val inputRegs: Set[Reg] = Set(Reg(1), Reg(2))
+  val initRegs: Set[Reg] = addressable ++ Set(LO, HI, TMP)
 
   private var newReg = maxReg
 
