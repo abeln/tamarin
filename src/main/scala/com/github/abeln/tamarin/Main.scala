@@ -6,6 +6,6 @@ package com.github.abeln.tamarin
 object Main {
 
   def main(args: Array[String]): Unit = {
-    System.out.println(Query.query(Seq()))
+    ???
   }
 }
