@@ -54,6 +54,4 @@ object Query extends Constraints {
     reg2exp += (r -> exp)
     exp
   }
-
-
 }
