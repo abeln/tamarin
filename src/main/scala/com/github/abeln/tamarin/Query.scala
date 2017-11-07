@@ -25,7 +25,7 @@ object Query {
     val bv64 = ctx.mkBitVecSort(64)
     implicit val context = Ctx(ctx, bv32, bv64)
     val reg2consts = mkConsts(trace)
-    val asserts = mkAsserts(trace, reg2consts, bv32, bv64)
+    val asserts = mkAsserts(trace, reg2consts)
     val solver = ctx.mkSolver()
     solver.add(asserts: _*)
     if (solver.check() == Status.SATISFIABLE) {
