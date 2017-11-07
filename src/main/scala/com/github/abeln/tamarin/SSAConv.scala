@@ -79,8 +79,8 @@ object SSAConv extends TraceMap {
       val s2 = lookup(s)
       Lw(update(t), o, s2)
     case Sw(t, o, s) => Sw(lookup(t).asInstanceOf[Reg], o, lookup(s))
-    case Beq(s, t, i) => Beq(lookup(s).asInstanceOf[Reg], lookup(t), i)
-    case Bne(s, t, i) => Bne(lookup(s).asInstanceOf[Reg], lookup(t), i)
+    case EqCond(s, t) => EqCond(lookup(s).asInstanceOf[Reg], lookup(t))
+    case NeqCond(s, t) => NeqCond(lookup(s).asInstanceOf[Reg], lookup(t))
     case instr => err(s"Don't know how to SSA-convert $instr")
   }
 }

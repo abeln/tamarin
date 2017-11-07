@@ -75,7 +75,7 @@ object SymInstr {
   def assign(d: Reg, s: Operand) = Add(d, s, Lit(0))
 
   // Path conditions
-  case class Beq(s: Operand, t: Operand, i: Int) extends Instr with PathCond
-  case class Bne(s: Operand, t: Operand, i: Int) extends Instr with PathCond
+  case class EqCond(s: Operand, t: Operand) extends Instr with PathCond
+  case class NeqCond(s: Operand, t: Operand) extends Instr with PathCond
   // jr doesn't show up here because we don't symbolically track the state of the PC.
 }
