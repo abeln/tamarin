@@ -11,11 +11,8 @@ object Main {
     val proc = Desugar andThen SSAConv
 
     println(Query.solve(proc(trace(
-      Add(Reg(4), Lit(42), Lit(0)),
-      Sw(Reg(4), 0, Lit(100)),
-      Add(Reg(1), Reg(1), Reg(2)),
-      Lw(Reg(3), 50, Reg(1)),
-      EqCond(Reg(3), Lit(42))
+      Slt(Reg(4), Reg(1), Reg(2)),
+      EqCond(Reg(4), Lit(0))
     ))))
   }
 }

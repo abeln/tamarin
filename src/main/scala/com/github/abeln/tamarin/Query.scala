@@ -139,6 +139,11 @@ object Query {
 
     def plus32(o1: Operand, o2: Operand): BitVecExpr = ctx.mkBVAdd(b32(o1), b32(o2))
 
+    /** Generic (un)signed slt operator */
+    def slt(cmp: (BitVecExpr, BitVecExpr) => BoolExpr, o1: Operand, o2: Operand): BitVecExpr = {
+      ctx.mkITE(cmp(b32(o1), b32(o2)), b32(Lit(1)), b32(Lit(0))).asInstanceOf[BitVecExpr]
+    }
+
     val traceAsserts = (Seq.empty[BoolExpr] /: trace) { (asserts, instr) =>
       (instr match {
         case Add(d, s, t) =>
@@ -155,6 +160,10 @@ object Query {
         case Sw(t, offset, s) =>
           val Store(extend, mem) = memMap(instr)
           Seq(ctx.mkEq(mem, ctx.mkStore(extend, plus32(Lit(offset), s), b32(t))))
+        case Slt(d, s, t) =>
+          Seq(ctx.mkEq(b32(d), slt((o1, o2) => ctx.mkBVSLT(o1, o2), s, t)))
+        case SltU(d, s, t) =>
+          Seq(ctx.mkEq(b32(d), slt((o1, o2) => ctx.mkBVULT(o1, o2), s, t)))
         case _ => err(s"Unsupported instruction $instr")
       }) ++ asserts
     }.reverse
