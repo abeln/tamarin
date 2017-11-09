@@ -46,7 +46,7 @@ object Query {
       Some(inputRegs.toSeq map { r =>
         val interp = model.getConstInterp(reg2consts(r))
         if (interp == null) Unbound
-        else Fixed(interp.toString.toLong) // TODO: find a better way to get the long value of a constant in the model
+        else Fixed(interp.toString.toLong.toInt) // TODO: find a better way to get the long value of a constant in the model
       })
     } else None
   }
@@ -144,6 +144,16 @@ object Query {
       ctx.mkITE(cmp(b32(o1), b32(o2)), b32(Lit(1)), b32(Lit(0))).asInstanceOf[BitVecExpr]
     }
 
+    /** Widens a 32-bit bitvector to 64 bits */
+    def widen64(o: Operand, signed: Boolean): BitVecExpr = {
+      val bv = b32(o)
+      if (bv.getSortSize != 32) err(s"Can only widen 32-bit vectors, this one has size ${bv.getSortSize}")
+      else {
+        if (signed) ctx.mkSignExt(32, b32(o))
+        else ctx.mkZeroExt(32, b32(o))
+      }
+    }
+
     val traceAsserts = (Seq.empty[BoolExpr] /: trace) { (asserts, instr) =>
       (instr match {
         case Add(d, s, t) =>
@@ -166,6 +176,18 @@ object Query {
           Seq(ctx.mkEq(b32(d), slt((o1, o2) => ctx.mkBVULT(o1, o2), s, t)))
         case Jalr(concretePC) =>
           Seq(ctx.mkEq(b32(returnPC), b32(Lit(concretePC))))
+        case Mult64(d, s, t) =>
+          // d is 64 bits
+          Seq(ctx.mkEq(b64(d), ctx.mkBVMul(widen64(s, signed=true), widen64(t, signed=true))))
+        case MultU64(d, s, t) =>
+          // d is 64 bits
+          Seq(ctx.mkEq(b64(d), ctx.mkBVMul(widen64(s, signed=false), widen64(t, signed=false))))
+        case Low32(d, s) =>
+          // s is 64 bits
+          Seq(ctx.mkEq(b32(d), ctx.mkExtract(31, 0, b64(s))))
+        case High32(d, s) =>
+          // s is 64 bits
+          Seq(ctx.mkEq(b32(d), ctx.mkExtract(63, 32, b64(s))))
         case _ => err(s"Unsupported instruction $instr")
       }) ++ asserts
     }.reverse

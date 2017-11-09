@@ -11,8 +11,9 @@ object Main {
     val proc = Desugar andThen SSAConv
 
     println(Query.solve(proc(trace(
-      Slt(Reg(4), Reg(1), Reg(2)),
-      EqCond(Reg(4), Lit(0))
+      Mult(Reg(1), Reg(2)),
+      Mfhi(Reg(3)),
+      EqCond(Reg(3), Lit(25))
     ))))
   }
 }
