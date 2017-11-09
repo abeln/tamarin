@@ -157,39 +157,47 @@ object Query {
     val traceAsserts = (Seq.empty[BoolExpr] /: trace) { (asserts, instr) =>
       (instr match {
         case Add(d, s, t) =>
-          Seq(ctx.mkEq(b32(d), plus32(s, t)))
+          ctx.mkEq(b32(d), plus32(s, t))
         case Sub(d, s, t) =>
-          Seq(ctx.mkEq(b32(d), ctx.mkBVSub(b32(s), b32(t))))
+          ctx.mkEq(b32(d), ctx.mkBVSub(b32(s), b32(t)))
         case EqCond(s, t) =>
-          Seq(ctx.mkEq(b32(s), b32(t)))
+          ctx.mkEq(b32(s), b32(t))
         case NeqCond(s, t) =>
-          Seq(ctx.mkNot(ctx.mkEq(b32(s), b32(t))))
+          ctx.mkNot(ctx.mkEq(b32(s), b32(t)))
         case Lw(t, offset, s) =>
           val Select(mem) = memMap(instr)
-          Seq(ctx.mkEq(b32(t), ctx.mkSelect(mem, plus32(Lit(offset), s))))
+          ctx.mkEq(b32(t), ctx.mkSelect(mem, plus32(Lit(offset), s)))
         case Sw(t, offset, s) =>
           val Store(extend, mem) = memMap(instr)
-          Seq(ctx.mkEq(mem, ctx.mkStore(extend, plus32(Lit(offset), s), b32(t))))
+          ctx.mkEq(mem, ctx.mkStore(extend, plus32(Lit(offset), s), b32(t)))
         case Slt(d, s, t) =>
-          Seq(ctx.mkEq(b32(d), slt((o1, o2) => ctx.mkBVSLT(o1, o2), s, t)))
+          ctx.mkEq(b32(d), slt((o1, o2) => ctx.mkBVSLT(o1, o2), s, t))
         case SltU(d, s, t) =>
-          Seq(ctx.mkEq(b32(d), slt((o1, o2) => ctx.mkBVULT(o1, o2), s, t)))
+          ctx.mkEq(b32(d), slt((o1, o2) => ctx.mkBVULT(o1, o2), s, t))
         case Jalr(concretePC) =>
-          Seq(ctx.mkEq(b32(returnPC), b32(Lit(concretePC))))
+          ctx.mkEq(b32(returnPC), b32(Lit(concretePC)))
         case Mult64(d, s, t) =>
           // d is 64 bits
-          Seq(ctx.mkEq(b64(d), ctx.mkBVMul(widen64(s, signed=true), widen64(t, signed=true))))
+          ctx.mkEq(b64(d), ctx.mkBVMul(widen64(s, signed=true), widen64(t, signed=true)))
         case MultU64(d, s, t) =>
           // d is 64 bits
-          Seq(ctx.mkEq(b64(d), ctx.mkBVMul(widen64(s, signed=false), widen64(t, signed=false))))
+          ctx.mkEq(b64(d), ctx.mkBVMul(widen64(s, signed=false), widen64(t, signed=false)))
         case Low32(d, s) =>
           // s is 64 bits
-          Seq(ctx.mkEq(b32(d), ctx.mkExtract(31, 0, b64(s))))
+          ctx.mkEq(b32(d), ctx.mkExtract(31, 0, b64(s)))
         case High32(d, s) =>
           // s is 64 bits
-          Seq(ctx.mkEq(b32(d), ctx.mkExtract(63, 32, b64(s))))
+          ctx.mkEq(b32(d), ctx.mkExtract(63, 32, b64(s)))
+        case Quot(d, s, t) =>
+          ctx.mkEq(b32(d), ctx.mkBVSDiv(b32(s), b32(t)))
+        case QuotU(d, s, t) =>
+          ctx.mkEq(b32(d), ctx.mkBVUDiv(b32(s), b32(t)))
+        case Rem(d, s, t) =>
+          ctx.mkEq(b32(d), ctx.mkBVSRem(b32(s), b32(t)))
+        case RemU(d, s, t) =>
+          ctx.mkEq(b32(d), ctx.mkBVURem(b32(s), b32(t)))
         case _ => err(s"Unsupported instruction $instr")
-      }) ++ asserts
+      }) +: asserts
     }.reverse
 
     initAsserts ++ traceAsserts
