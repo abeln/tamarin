@@ -1,6 +1,8 @@
 package com.github.abeln.tamarin.mips
 
 import State._
+import com.github.abeln.tamarin.SymInstr
+import com.github.abeln.tamarin.SymInstr.{Lit, Operand, Reg, Trace}
 
 import scala.annotation.tailrec
 import implementation._
@@ -30,7 +32,7 @@ object CPU {
     encodeUnsigned(mod2to32(asUnsigned(address) + bytes))
 
   /** The transition function for one step of execution of the CPU. */
-  def step(state0: State): State = {
+  def step(state0: State): (State, Trace) = {
 
     /* Fetch the instruction at the PC. */
     val pc = readRegister(state0, PC)
@@ -45,6 +47,28 @@ object CPU {
       checkValidPC(newPC)
       state0.setReg(PC, newPC)
     }
+
+    /**
+      * Constructs the symbolic representation of a register.
+      * Except for the PC, which is concretized.
+      **/
+    def symb(r: Long): Operand = {
+      r match {
+        case PC => Lit(asSigned(state0.reg(PC)))
+        case LO => SymInstr.LO
+        case HI => SymInstr.HI
+        case _ => SymInstr.Reg(r.asInstanceOf[Int])
+      }
+    }
+
+    /** Conditionally executes the thunk, if the register is symbolically tracked. */
+    def guard(r: Long)(t: Trace): Trace = {
+      if (r == PC) SymInstr.trace()
+      else t
+    }
+
+    /** Like `symb`, but when we're sure the register is tracked. */
+    def symr(r: Long) = symb(r).asInstanceOf[Reg]
 
     /* Increment the program counter. */
     val state1 = incrementPC(state0)
@@ -61,66 +85,80 @@ object CPU {
         else function match {
 
           case Bits("100000") => // add
+            val tr = guard(d)(SymInstr.trace(SymInstr.Add(symr(d), symb(s), symb(t))))
             val result = asUnsigned(readRegister(state1, s)) + asUnsigned(readRegister(state1, t))
-            state1.setReg(d, encodeUnsigned(mod2to32(result)))
+            (state1.setReg(d, encodeUnsigned(mod2to32(result))), tr)
 
           case Bits("100010") => // sub
+            val tr = guard(d)(SymInstr.trace(SymInstr.Sub(symr(d), symb(s), symb(t))))
             val result = asUnsigned(readRegister(state1, s)) - asUnsigned(readRegister(state1, t))
-            state1.setReg(d, encodeUnsigned(mod2to32(result)))
+            (state1.setReg(d, encodeUnsigned(mod2to32(result))), tr)
 
           case Bits("011000") if d == 0 => // mult
+            val tr = SymInstr.trace(SymInstr.Mult(symb(s), symb(t)))
             val result = asSigned(readRegister(state1, s)) * asSigned(readRegister(state1, t))
             val (bitshi, bitslo) = encodeSigned64(result).splitAt(32)
-            state1.setReg(LO, Word(bitslo)).setReg(HI, Word(bitshi))
+            (state1.setReg(LO, Word(bitslo)).setReg(HI, Word(bitshi)), tr)
 
           case Bits("011001") if d == 0 => // multu
+            val tr = SymInstr.trace(SymInstr.MultU(symb(s), symb(t)))
             val result = asUnsigned(readRegister(state1, s)) * asUnsigned(readRegister(state1, t))
             val (bitshi, bitslo) = encodeUnsigned64(result).splitAt(32)
-            state1.setReg(LO, Word(bitslo)).setReg(HI, Word(bitshi))
+            (state1.setReg(LO, Word(bitslo)).setReg(HI, Word(bitshi)), tr)
 
           case Bits("011010") if d == 0 => // div
+            val tr = SymInstr.trace(SymInstr.Div(symb(s), symb(t)))
             val quotient = asSigned(readRegister(state1, s)) / asSigned(readRegister(state1, t))
             val remainder = asSigned(readRegister(state1, s)) % asSigned(readRegister(state1, t))
             val bitslo = encodeSigned(mod2to32signed(quotient))
             val bitshi = encodeSigned(mod2to32signed(remainder))
-            state1.setReg(LO, bitslo).setReg(HI, bitshi)
+            (state1.setReg(LO, bitslo).setReg(HI, bitshi), tr)
 
           case Bits("011011") if d == 0 => // divu
+            val tr = SymInstr.trace(SymInstr.DivU(symb(s), symb(t)))
             val quotient = asUnsigned(readRegister(state1, s)) / asUnsigned(readRegister(state1, t))
             val remainder = asUnsigned(readRegister(state1, s)) % asUnsigned(readRegister(state1, t))
             val bitslo = encodeUnsigned(mod2to32(quotient))
             val bitshi = encodeUnsigned(mod2to32(remainder))
-            state1.setReg(LO, bitslo).setReg(HI, bitshi)
+            (state1.setReg(LO, bitslo).setReg(HI, bitshi), tr)
 
           case Bits("010000") if s == 0 && t == 0 => // mfhi
-            state1.setReg(d, readRegister(state1, HI))
+            val tr = guard(d)(SymInstr.trace(SymInstr.Mfhi(symr(d))))
+            (state1.setReg(d, readRegister(state1, HI)), tr)
 
           case Bits("010010") if s == 0 && t == 0 => // mflo
-            state1.setReg(d, readRegister(state1, LO))
+            val tr = guard(d)(SymInstr.trace(SymInstr.Mflo(symr(d))))
+            (state1.setReg(d, readRegister(state1, LO)), tr)
 
           case Bits("010100") if s == 0 && t == 0 => // lis
-            val loadConstant = state1.setReg(d, state1.mem(readRegister(state1, PC)))
-            incrementPC(loadConstant)
+            val contents = state1.mem(readRegister(state1, PC))
+            val tr = guard(d)(SymInstr.trace(SymInstr.Add(symr(d), SymInstr.Lit(asSigned(contents)), SymInstr.Lit(0))))
+            val loadConstant = state1.setReg(d, contents)
+            (incrementPC(loadConstant), tr)
 
           case Bits("101010") => // slt
+            val tr = guard(d)(SymInstr.trace(SymInstr.Slt(symr(d), symb(s), symb(t))))
             val result = asSigned(readRegister(state1, s)) < asSigned(readRegister(state1, t))
-            state1.setReg(d,  Word(Bits("0" * 31) :+ result))
+            (state1.setReg(d,  Word(Bits("0" * 31) :+ result)), tr)
 
           case Bits("101011") => // sltu
+            val tr = guard(d)(SymInstr.trace(SymInstr.SltU(symr(d), symb(s), symb(t))))
             val result = asUnsigned(readRegister(state1, s)) < asUnsigned(readRegister(state1, t))
-            state1.setReg(d,  Word(Bits("0" * 31) :+ result))
+            (state1.setReg(d,  Word(Bits("0" * 31) :+ result)), tr)
 
           case Bits("001000") if t == 0 && d == 0 => // jr
             val newAddress = readRegister(state1, s)
             checkValidPC(newAddress)
-            state1.setReg(PC, newAddress)
+            // This one just modifies the PC, which we don't keep track off.
+            (state1.setReg(PC, newAddress), SymInstr.trace())
 
           case Bits("001001") if t == 0 && d == 0 => // jalr
+            val tr = SymInstr.trace(SymInstr.Jalr(asSigned(readRegister(state0, PC))))
             val newAddress = readRegister(state1, s)
             checkValidPC(newAddress)
-            state1
+            (state1
               .setReg(31, readRegister(state1, PC))
-              .setReg(PC, newAddress)
+              .setReg(PC, newAddress), tr)
 
           case _ => invalidInstruction
         }
@@ -154,10 +192,20 @@ object CPU {
     }
   }
 
-  /** Run steps of the CPU starting in `state` until it reaches a state when the PC has the value `terminationPC`. */
-  @tailrec def run(state: State): State = {
-    if(state.reg(PC) == terminationPC) state
-    else run(step(state))
+  /**
+    * Run steps of the CPU starting in `state` until it reaches a state when the PC has the value `terminationPC`.
+    * Additionally, records a symbolic trace of the program's execution.
+    * */
+  def run(state: State): (State, Trace) = {
+    runAcc(state, SymInstr.trace())
+  }
+
+  @tailrec def runAcc(state: State, trace: Trace): (State, Trace) = {
+    if(state.reg(PC) == terminationPC) (state, trace.reverse)
+    else {
+      val (newSt, newTr) = step(state)
+      runAcc(newSt, newTr ++ trace)
+    }
   }
 
   /** The PC value at which the CPU should halt execution. */

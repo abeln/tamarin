@@ -51,7 +51,7 @@ object SymInstr {
   case class Slt(d: Reg, s: Operand, t: Operand) extends Instr
   case class SltU(d: Reg, s: Operand, t: Operand) extends Instr
   // Since we don't track the PC symbolically, we force you to concretize it for `jalr`.
-  case class Jalr(concretePC: Int) extends Instr
+  case class Jalr(concretePC: Long) extends Instr
 
   // The following aren't MIPS instructions, but are used to desugar MIPS instructions
   // into operations the solver can understand.
