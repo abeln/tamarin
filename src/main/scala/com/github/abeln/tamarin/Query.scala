@@ -164,6 +164,8 @@ object Query {
           Seq(ctx.mkEq(b32(d), slt((o1, o2) => ctx.mkBVSLT(o1, o2), s, t)))
         case SltU(d, s, t) =>
           Seq(ctx.mkEq(b32(d), slt((o1, o2) => ctx.mkBVULT(o1, o2), s, t)))
+        case Jalr(concretePC) =>
+          Seq(ctx.mkEq(b32(returnPC), b32(Lit(concretePC))))
         case _ => err(s"Unsupported instruction $instr")
       }) ++ asserts
     }.reverse
