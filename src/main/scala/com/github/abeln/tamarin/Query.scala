@@ -153,7 +153,7 @@ object Query {
         case EqCond(s, t) =>
           Seq(ctx.mkEq(b32(s), b32(t)))
         case NeqCond(s, t) =>
-          Seq(ctx.mkEq(b32(s), b32(t)))
+          Seq(ctx.mkNot(ctx.mkEq(b32(s), b32(t))))
         case Lw(t, offset, s) =>
           val Select(mem) = memMap(instr)
           Seq(ctx.mkEq(b32(t), ctx.mkSelect(mem, plus32(Lit(offset), s))))
