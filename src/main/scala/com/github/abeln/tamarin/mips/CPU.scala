@@ -132,7 +132,7 @@ object CPU {
 
           case Bits("010100") if s == 0 && t == 0 => // lis
             val contents = state1.mem(readRegister(state1, PC))
-            val tr = guard(d)(SymInstr.trace(SymInstr.Add(symr(d), SymInstr.Lit(asSigned(contents)), SymInstr.Lit(0))))
+            val tr = guard(d)(SymInstr.trace(SymInstr.assign(symr(d), SymInstr.Lit(asSigned(contents)))))
             val loadConstant = state1.setReg(d, contents)
             (incrementPC(loadConstant), tr)
 
@@ -153,7 +153,7 @@ object CPU {
             (state1.setReg(PC, newAddress), SymInstr.trace())
 
           case Bits("001001") if t == 0 && d == 0 => // jalr
-            val tr = SymInstr.trace(SymInstr.Jalr(asSigned(readRegister(state0, PC))))
+            val tr = SymInstr.trace(SymInstr.Jalr(asSigned(readRegister(state1, PC))))
             val newAddress = readRegister(state1, s)
             checkValidPC(newAddress)
             (state1
@@ -166,27 +166,39 @@ object CPU {
       case Bits("100011") => // lw
         val address = incrementAddress(readRegister(state1, s), asSigned(iBits))
         checkValidAddress(address)
-        state1.setReg(t, state1.mem(address))
+        val tr = SymInstr.trace(SymInstr.Lw(Reg(t), asSigned(iBits), Reg(s)))
+        (state1.setReg(t, state1.mem(address)), tr)
 
       case Bits("101011") => // sw
         val address = incrementAddress(readRegister(state1, s), asSigned(iBits))
+        val tr = SymInstr.trace(SymInstr.Sw(Reg(t), asSigned(iBits), Reg(s)))
         if(address == printAddr) {
           outputStream.print(implementation.asUnsigned(readRegister(state1, t).takeRight(8)).toChar)
-          state1
+          (state1, tr)
         } else {
           checkValidAddress(address)
-          state1.setMem(address, readRegister(state1, t))
+          (state1.setMem(address, readRegister(state1, t)), tr)
         }
 
       case Bits("000100") => // beq
-        if(readRegister(state1, s) == readRegister(state1, t))
-          incrementPC(state1, words = implementation.asSigned(iBits))
-        else state1
+        if(readRegister(state1, s) == readRegister(state1, t)) {
+          val tr = SymInstr.trace(SymInstr.EqCond(Reg(s), Reg(t)))
+          (incrementPC(state1, words = implementation.asSigned(iBits)), tr)
+        }
+        else {
+          val tr = SymInstr.trace(SymInstr.NeqCond(Reg(s), Reg(t)))
+          (state1, tr)
+        }
 
       case Bits("000101") => // bne
-        if(readRegister(state1, s) != readRegister(state1, t))
-          incrementPC(state1, words = implementation.asSigned(iBits))
-        else state1
+        if(readRegister(state1, s) != readRegister(state1, t)) {
+          val tr = SymInstr.trace(SymInstr.NeqCond(Reg(s), Reg(t)))
+          (incrementPC(state1, words = implementation.asSigned(iBits)), tr)
+        }
+        else {
+          val tr = SymInstr.trace(SymInstr.EqCond(Reg(s), Reg(t)))
+          (state1, tr)
+        }
 
       case _ => invalidInstruction
     }

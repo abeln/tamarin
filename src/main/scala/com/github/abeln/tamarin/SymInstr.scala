@@ -7,7 +7,7 @@ object SymInstr {
 
   /** An operand is either a register or a literal (when the register has been concretized). */
   sealed trait Operand
-  case class Reg(r: Int) extends Operand
+  case class Reg(r: Long) extends Operand
   case class Lit(v: Long) extends Operand
 
   /** Special registers */
@@ -46,8 +46,8 @@ object SymInstr {
   case class DivU(s: Operand, t: Operand) extends Instr
   case class Mfhi(d: Reg) extends Instr
   case class Mflo(d: Reg) extends Instr
-  case class Lw(t: Reg, offset: Int, s: Operand) extends Instr
-  case class Sw(t: Reg, offset: Int, s: Operand) extends Instr
+  case class Lw(t: Reg, offset: Long, s: Operand) extends Instr
+  case class Sw(t: Reg, offset: Long, s: Operand) extends Instr
   case class Slt(d: Reg, s: Operand, t: Operand) extends Instr
   case class SltU(d: Reg, s: Operand, t: Operand) extends Instr
   // Since we don't track the PC symbolically, we force you to concretize it for `jalr`.
