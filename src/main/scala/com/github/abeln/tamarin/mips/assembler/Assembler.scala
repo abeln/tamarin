@@ -1,6 +1,7 @@
 package com.github.abeln.tamarin.mips.assembler
 
-import com.github.abeln.tamarin.mips.{Bits, Word, twoTo}
+import com.github.abeln.tamarin.SymInstr.Trace
+import com.github.abeln.tamarin.mips.{Bits, CPU, State, Word, twoTo}
 
 import scala.collection.mutable
 
@@ -190,5 +191,31 @@ object Assembler {
 
   def JALR(s: Reg): Word = {
     Word(Bits(s"000000${binreg(s)}000000000000000001001"))
+  }
+
+  /** The `setMem` method in `State` loads one word into a specific memory location identified by
+    * a given address. Implement this extended `setMem` method that takes a sequence of `words` and writes them
+    * into successive memory locations in `inputState` starting with a given `startingAddress`. Return the
+    * resulting state.
+    */
+  def setMem(words: Seq[Word], inputState: State = State(), startingAddress: Word = Word.zero): State = {
+    require(decodeUnsigned(startingAddress) + words.size*4 <= decodeUnsigned(CPU.maxAddr))
+    val (finalSt, _) = words.foldLeft((inputState, startingAddress)) {
+      case ((st, addr), word) =>
+        (st.setMem(addr, word), nextWord(addr))
+    }
+    finalSt
+  }
+
+  /** You can use this helper method to test the following programs that you will write. It loads the
+    * given `words` into memory, writes the specified values to registers 1 and 2, and then runs
+    * the CPU on the `words` that were loaded.
+    */
+  def loadAndRun(words: Seq[Word], register1: Word = Word.zero, register2: Word = Word.zero): (State, Trace) = {
+    val initialState =
+      setMem(words)
+        .setReg(1, register1)
+        .setReg(2, register2)
+    CPU.run(initialState)
   }
 }
