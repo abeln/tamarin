@@ -86,11 +86,6 @@ object Assembler {
     Word(encodeUnsigned(numAddr + 4))
   }
 
-  /* Before continuing Assignment 1, go to `A1.scala` and complete the methods there. Then return here and implement
-   * the following.
-   */
-
-
   /* Each of the following methods should encode the corresponding MIPS machine language instruction as a 32-bit `Word`.
    *
    * Hint: One way to create a word is from a sequence of 32 Booleans.
