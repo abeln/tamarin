@@ -3,6 +3,7 @@ package com.github.abeln.tamarin
 
 import com.github.abeln.tamarin.SymInstr._
 import com.github.abeln.tamarin.Err.err
+import com.github.abeln.tamarin.mips.CPU
 import com.microsoft.z3._
 
 /**
@@ -135,7 +136,14 @@ object Query {
       case Lit(v) => ctx.mkNumeral(v, bv64).asInstanceOf[BitVecExpr]
     }
 
-    val initAsserts = ((initRegs diff inputRegs) map (r => ctx.mkEq(b32(r), b32(Lit(0))))).toSeq
+    val initAsserts = ((initRegs diff inputRegs) map { r =>
+      val initVal = r match {
+        case _ if r == savedPC => CPU.numTerminationPC
+        case _ if r == stackPointer => CPU.numMaxAddr
+        case _ => 0
+      }
+      ctx.mkEq(b32(r), b32(Lit(initVal)))
+    }).toSeq
 
     def plus32(o1: Operand, o2: Operand): BitVecExpr = ctx.mkBVAdd(b32(o1), b32(o2))
 
@@ -175,7 +183,7 @@ object Query {
         case SltU(d, s, t) =>
           ctx.mkEq(b32(d), slt((o1, o2) => ctx.mkBVULT(o1, o2), s, t))
         case Jalr(concretePC) =>
-          ctx.mkEq(b32(returnPC), b32(Lit(concretePC)))
+          ctx.mkEq(b32(savedPC), b32(Lit(concretePC)))
         case Mult64(d, s, t) =>
           // d is 64 bits
           ctx.mkEq(b64(d), ctx.mkBVMul(widen64(s, signed=true), widen64(t, signed=true)))

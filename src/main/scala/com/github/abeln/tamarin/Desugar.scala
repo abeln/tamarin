@@ -7,7 +7,7 @@ import com.github.abeln.tamarin.TraceMap.instrToTrace
   */
 object Desugar extends TraceMap {
   override protected def transform: PartialFunction[SymInstr.Instr, Trace] = {
-    case Jalr(concretePC) => assign(returnPC, Lit(concretePC))
+    case Jalr(concretePC) => assign(savedPC, Lit(concretePC))
     case Mult(s, t) => trace(
       Mult64(TMP, s, t),
       Low32(LO, TMP),

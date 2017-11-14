@@ -223,8 +223,12 @@ object CPU {
   /** The PC value at which the CPU should halt execution. */
   val terminationPC = Word("11111110111000011101111010101101")
 
+  val numTerminationPC: Long = asUnsigned(terminationPC)
+
   /** The address that is one word beyond the last valid memory address. */
   val maxAddr =       Word("00000001000000000000000000000000")
+
+  val numMaxAddr: Long = asUnsigned(maxAddr)
 
   /** The special address for producing output. When a word is stored to this address, the low-order 8 bits of
     * that word are written to standard output.

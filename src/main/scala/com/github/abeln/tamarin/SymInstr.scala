@@ -11,7 +11,8 @@ object SymInstr {
   case class Lit(v: Long) extends Operand
 
   /** Special registers */
-  val returnPC = Reg(31)
+  val savedPC = Reg(31)
+  val stackPointer = Reg(30)
   val LO: Reg = freshRegister()
   val HI: Reg = freshRegister()
   val TMP: Reg = freshRegister()
