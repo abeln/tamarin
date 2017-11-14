@@ -23,7 +23,7 @@ object Concolic {
   val defaultDepth = 42
 
   /** Default values for input registers */
-  private val defaultInputs: Seq[Long] = Seq.fill(inputRegs.size)(0)
+  private val defaultInputs: Seq[Long] = Seq.fill(inputRegs.size)(7)
 
   /**
     * A state in the execution of the concolic testing engine.
@@ -79,10 +79,11 @@ object Concolic {
           if (turn) ne
           else NotEquiv(inputs, o2, o1) // flip the outputs so that the reference and cand are properly marked
         case Left(newExecSt) =>
+          val nturn = if (freeze) turn else !turn
           val nextSt = if (turn) {
-            State(newExecSt, cand, !turn, freezeTurn = freeze)
+            State(newExecSt, cand, nturn, freezeTurn = freeze)
           } else {
-            State(ref, newExecSt, !turn, freezeTurn = freeze)
+            State(ref, newExecSt, nturn, freezeTurn = freeze)
           }
           step(nextSt)
       }
@@ -232,8 +233,10 @@ object Concolic {
           return None
         } else {
           res += conds(currCond)
+          currCond += 1
         }
       }
+      i += 1
     }
     Some(res)
   }

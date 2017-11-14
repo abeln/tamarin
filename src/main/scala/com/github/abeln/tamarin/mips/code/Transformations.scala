@@ -118,7 +118,7 @@ object Transformations {
   /** Entry point to convert from assembly with labels and comments into machine code. */
   def toMachineCode(codes: Seq[Code]): Seq[Word] = {
     val noComments = eliminateComments(codes)
-    eliminateLabels(codes)
+    eliminateLabels(noComments)
   }
 }
 
