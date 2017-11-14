@@ -20,6 +20,8 @@ object SymInstr {
   val maxReg = 31 // there are 31 addressable registers
   val addressable: Set[Reg] = (0 to maxReg).map(r => Reg(r)).toSet
   val inputRegs: Set[Reg] = Set(Reg(1), Reg(2))
+  // TODO: extend to multiple output registers?
+  val outputReg = Reg(3)
   val initRegs: Set[Reg] = addressable ++ Set(LO, HI, TMP)
 
   private var newReg = maxReg

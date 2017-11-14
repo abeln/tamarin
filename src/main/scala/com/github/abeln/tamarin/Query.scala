@@ -14,7 +14,7 @@ object Query {
   /** A solution is a sequence of values for the input registers. */
   sealed trait RegVal
   case object Unbound extends RegVal
-  case class Fixed(v: Long) extends RegVal
+  case class Fixed(r: Long, v: Long) extends RegVal
 
   type Soln = Seq[RegVal]
 
@@ -47,7 +47,7 @@ object Query {
       Some(inputRegs.toSeq map { r =>
         val interp = model.getConstInterp(reg2consts(r))
         if (interp == null) Unbound
-        else Fixed(interp.toString.toLong.toInt) // TODO: find a better way to get the long value of a constant in the model
+        else Fixed(r.r, interp.toString.toLong.toInt) // TODO: find a better way to get the long value of a constant in the model
       })
     } else None
   }
