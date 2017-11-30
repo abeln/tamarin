@@ -16,108 +16,127 @@ object Concolic {
 
   type Program = Seq[Code]
 
-  /** Stateful trace containing stateful instructions */
+  /** A stateful trace contains stateful instructions */
   private type StTrace = Seq[StInstr]
 
-  /** The default max depth of the explored path conditions. Larger means more testing, but slower. */
-  val defaultDepth = 42
-
-  /** Default values for input registers */
-  private val defaultInputs: Seq[Long] = Seq.fill(inputRegs.size)(7)
-
   /**
-    * A state in the execution of the concolic testing engine.
+    * Augments an instruction with information on whether its negation was already explored (flipped).
+    * Only path conditions will be flipped: the field will be unused for all other instruction types.
     *
-    * @param driver the program that `drives` the execution (i.e. the one whose path conditions we care about)
-    * @param passenger the program whose results must match those of the driver. It doesn't drive any execution decisions.
-    * @param trace the sequence of symbolic instructions taken in the previous execution of `driver`.
-    */
-  private case class ExecState(driver: Program, passenger: Program, trace: StTrace)
-
-  /**
-    * Augments a symbolic instruction with information on whether its negation was already explored
-    * Note that, in practice, this applies only to path conditions (but it's not constrained by the types).
-    *
-    * @param instr the underlying instruction
-    * @param flipped whether the negation of the condition was already explored (only for path conds)
+    * @param instr the underlying path condition
+    * @param flipped whether the negation of the condition was already explored
     */
   private case class StInstr(instr: Instr, flipped: Boolean)
 
-  /**
-    * General state of the concolic engine, with one execution state for each of the reference and candidate programs.
-    * @param turn indicates which program we should "drive" at each step.
-    * @param freezeTurn whether we should stop flipping turn (used when one of the two programs is completely explored)
-    **/
-  private case class State(refState: ExecState, candState: ExecState, turn: Boolean, freezeTurn: Boolean)
+  /** The default max depth of the explored path conditions. Larger means more testing, but slower. */
+  val pathCondDepth = 42
+
+  /** Default values for input registers */
+  private val defaultInputs: Seq[Long] = Seq.fill(inputRegs.size)(42)
+
+  /** The state of a program within the concolic testing engine. */
+  private sealed trait ProgramSt
+  /** The program's state space has been completely explored */
+  private case object Done extends ProgramSt
+  /** The program can still execute further. `trace` denotes the current trace of path conds. */
+  private case class NotDone(prog: Program, trace: StTrace) extends ProgramSt
 
   /** The result of an equivalence check via concolic testing */
   sealed trait Res
-  /** The two programs are possibly equivalent */
+  /** The two programs are possibly equivalent (no difference in output was detected) */
   case object MaybeEquiv extends Res
   /** The two programs are _definitely not_ equivalent, together with input/output witnesses */
-  case class NotEquiv(inputs: Seq[Long], outputRef: Long, outputCand: Long) extends Res
+  case class NotEquiv(inputs: Seq[Long], ref: Long, cand: Long) extends Res
+
+  /** A version of [[NotEquiv]] that uses 'driver' and 'verifier' (varying) as opposed to 'ref' and 'cand' (constant) */
+  private case class Different(inputs: Seq[Long], driverRes: Long, verifierRes: Long)
 
   /**
     * Entry point to the concolic tester. Given two programs, finds out if they're not equivalent.
     *
     * @param reference the reference program
     * @param candidate the candidate program
-    * @param depth overrides the [[defaultDepth]], indicating how thoroughly we explore the state space
-    *
+    * @param depth     overrides the [[pathCondDepth]], indicating how thoroughly we explore the state space
     * @return whether the programs are not equivalent, or possibly equivalent.
     */
-  def compare(reference: Program, candidate: Program, depth: Int = defaultDepth): Res = {
+  def compare(reference: Program, candidate: Program)(implicit depth: Int = pathCondDepth): Res = {
     /** Takes one step in the comparison of the two input programs. Alternates between each of them at every step. */
-    @tailrec def step(st: State): Res = {
-      val State(ref, cand, turn, freeze) = st
-      val curr = if (turn) ref else cand
-      stepAux(curr) match {
-        case Right(MaybeEquiv) =>
-          if (freeze) MaybeEquiv // we've exhaused the branches on both programs
-          else step(State(ref, cand, !turn, freezeTurn = true)) // execute only one program from now on
-        case Right(ne@NotEquiv(inputs, o1, o2)) =>
-          if (turn) ne
-          else NotEquiv(inputs, o2, o1) // flip the outputs so that the reference and cand are properly marked
-        case Left(newExecSt) =>
-          val nturn = if (freeze) turn else !turn
-          val nextSt = if (turn) {
-            State(newExecSt, cand, nturn, freezeTurn = freeze)
-          } else {
-            State(ref, newExecSt, nturn, freezeTurn = freeze)
-          }
-          step(nextSt)
-      }
-    }
-
-    /**
-      * The core of the testing algorithm: executes the given driver for one step.
-      * If the driver can take one step, it returns either the new `Left(ExecState)`, or a counter-example `Right(NotEquiv)`.
-      * If the driver can't take any more steps, returns `Right(MaybeEquiv)`.
-      **/
-    def stepAux(execSt: ExecState): Either[ExecState, Res] = {
-      val ExecState(driver, pass, trace) = execSt
-      findTrace(trace, depth) match {
-        case None => Right(MaybeEquiv)
-        case Some((candTrace, inputs)) =>
-          val (reg1, reg2) = getInputs(inputs)
-          runTwo(driver, pass, reg1, reg2) match {
-            case Left(ne) if ne.isInstanceOf[NotEquiv] => Right(ne)
-            case Right((driverTrace, _)) =>
-              adaptTrace(candTrace, driverTrace) match {
-                case None => Right(MaybeEquiv) // TODO: implement restarts when traces don't match
-                case Some(newTrace) =>
-                  Left(ExecState(driver, pass, newTrace))
+    @tailrec def step(refSt: ProgramSt, candSt: ProgramSt, turn: Boolean): Res = {
+      (refSt, candSt) match {
+        case (Done, Done) => MaybeEquiv
+        case _ =>
+          val (driver, verifier) = if (turn) (refSt, candidate) else (candSt, reference)
+          stepAux(driver, verifier) match {
+            case Left(Different(inps, resDriver, resVerifier)) =>
+              if (turn) {
+                NotEquiv(inps, resDriver, resVerifier)
+              } else {
+                NotEquiv(inps, resVerifier, resDriver)
+              }
+            case Right(newDriverSt) =>
+              if (turn) {
+                step(newDriverSt, candSt, !turn)
+              } else {
+                step(refSt, newDriverSt, !turn)
               }
           }
       }
     }
 
-    init(reference, candidate) match {
-      case Left(ne) if ne.isInstanceOf[NotEquiv] => ne
-      case Right((refTrace, candTrace)) =>
-        val refState = ExecState(reference, candidate, refTrace)
-        val candState = ExecState(candidate, reference, candTrace)
-        step(State(refState, candState, turn = true, freezeTurn = false))
+    /**
+      * The core of the testing algorithm: executes the given driver for one step, verifying its output against
+      * the verifier.
+      *
+      * @return a counterexample, or the new program state
+      **/
+    def stepAux(driverSt: ProgramSt, verifier: Program): Either[Different, ProgramSt] = {
+      driverSt match {
+        case Done => Right(Done)
+        case NotDone(driver, trace) =>
+          findTrace(trace) match {
+            case None => Right(Done)
+            case Some((nTrace, soln)) =>
+              val (r1, r2) = getInputs(soln)
+              val RunResult(driverRes, driverTrace) = runProg(driver, r1, r2)
+              val RunResult(verifierRes, _) = runProg(verifier, r1, r2)
+              if (driverRes != verifierRes) {
+                Left(Different(Seq(r1, r2), driverRes, verifierRes))
+              } else {
+                adaptTrace(nTrace, driverTrace) match {
+                  case None => Right(Done) // TODO: implement restarts
+                  case Some(adaptedTrace) => Right(NotDone(driver, adaptedTrace))
+                }
+              }
+          }
+      }
+    }
+
+    /***
+      * Returns an initial trace for the driver program (using the provided input register values),
+      * or a counter-example if we got lucky.
+      **/
+    def init(driver: Program, verifier: Program, r1: Long, r2: Long): Either[Different, NotDone] = {
+      val RunResult(resDriver, traceDriver) = runProg(driver, r1, r2)
+      val RunResult(resVer, _) = runProg(verifier, r1, r2)
+      if (resDriver != resVer) {
+        Left(Different(Seq(r1, r2), resDriver, resVer))
+      } else {
+        Right(NotDone(driver, traceDriver map {instr => StInstr(instr, flipped = false)}))
+      }
+    }
+
+    // TODO: don't hardcode the inputs
+    val r1 = defaultInputs(0)
+    val r2 = defaultInputs(1)
+
+    init(reference, candidate, r1, r2) match {
+      case Left(Different(inps, dr, ver)) => NotEquiv(inps, dr, ver)
+      case Right(refSt) =>
+        init(candidate, reference, r1, r2) match {
+          case Left(Different(inps, dr, ver)) => NotEquiv(inps, ver, dr) // flip the order
+          case Right(candSt) =>
+            step(refSt, candSt, turn = true)
+        }
     }
   }
 
@@ -125,87 +144,63 @@ object Concolic {
   private case class RunResult(res: Long, trace: Trace)
 
   /** Runs a program, returning the value of the output register + the symbolic trace */
-  private def runProg(prog: Program, r1: Long, r2: Long): RunResult = {
+  private def runProg(prog: Program, r1: Long, r2: Long)(implicit depth: Int): RunResult = {
     val (finalSt, trace) = Assembler.loadAndRun(
       Transformations.toMachineCode(prog),
       Word(Assembler.encodeSigned(r1)),
       Word(Assembler.encodeSigned(r2))
     )
-    RunResult(Assembler.decodeSigned(finalSt.reg(outputReg.r).toSeq), trace)
+    RunResult(Assembler.decodeSigned(finalSt.reg(outputReg.r).toSeq), trim(trace, depth))
   }
 
-  private def runTwo(ref: Program, cand: Program, reg1: Long, reg2: Long): Either[NotEquiv, (Trace, Trace)] = {
-    val RunResult(resRef, traceRef) = runProg(ref, reg1, reg2)
-    val RunResult(resCand, traceCand) = runProg(cand, reg1, reg2)
-    if (resRef != resCand) Left(NotEquiv(Seq(reg1, reg2), resRef, resCand))
-    else Right((traceRef, traceCand))
-  }
-
-  /** Returns two initial traces for the programs, or a counter-example if we got lucky. */
-  private def init(ref: Program, cand: Program): Either[NotEquiv, (StTrace, StTrace)] = {
-    // TODO: don't hardcode these
-    val r1Default = defaultInputs(0)
-    val r2Default = defaultInputs(1)
-    runTwo(ref, cand, r1Default, r2Default) match {
-      case Left(ne) => Left(ne)
-      case Right((traceRef, traceCand)) =>
-        Right((addFlip(traceRef), addFlip(traceCand)))
+  /** Trim `trace` so that it contains at most `depth` path conds */
+  private def trim(trace: Trace, depth: Int): Trace = {
+    var pc = 0
+    trace.takeWhile { instr =>
+      if (pc > depth) false
+      else {
+        if (isPC(instr)) pc += 1
+        true
+      }
     }
   }
 
   /** Interface to the Query module that first simplifies the trace. */
   private def query(trace: StTrace): Option[Soln] = {
-    val tr = trace map (_.instr)
     val transform = Desugar andThen SSAConv
-    Query.solve(transform(tr))
+    Query.solve(transform(stripFlipped(trace)))
   }
 
-  /** Finds the deepest path condition (<= maxDepth) that can be negated, to force a (potentially) new path. */
-  private def findTrace(trace: StTrace, maxDepth: Int): Option[(StTrace, Soln)] = {
-    // TODO: this is super inefficient: find a better way
-    var i = 0
-    var depth = 0
-    while (i < trace.size && depth < maxDepth) {
-      trace(i) match {
-        case instr: Instr if isPathCond(instr) =>
-          depth += 1
-        case _ =>
-      }
-      i += 1
-    }
-    val subtrace = trace.slice(0, i)
-
-    var found = false
-    var newtrace: StTrace = Seq()
-    var res: Option[(StTrace, Soln)] = None
-
-    i = subtrace.size - 1
-    while (i >= 0 && !found) {
-      subtrace(i) match {
-        case instr@StInstr(_, false) if isPathCond(instr) => // A path condition that hasn't already been flipped.
-          newtrace = subtrace.slice(0, i) :+ StInstr(neg(subtrace(i).instr), flipped = true)
-          query(newtrace) match {
-            case Some(soln) =>
-              res = Some((newtrace, soln))
-              found = true
-            case None =>
+  /** Finds the deepest path condition that can be negated, to force a (potentially) new path. */
+  private def findTrace(trace: StTrace): Option[(StTrace, Soln)] = {
+    (prefixes(trace) :\ None.asInstanceOf[Option[(StTrace, Soln)]]) {
+      case (_, res: Some[(StTrace, Soln)]) => res // if we already have a solution, stick to it, since we want the largest prefix
+      case (candTrace, None) =>
+        val StInstr(instr, flipped) :: rTrace = candTrace.reverse
+        if (!isPC(instr) || flipped) {
+          None // can't flip
+        } else {
+          val nTrace = (StInstr(neg(instr), flipped = true) :: rTrace).reverse
+          query(nTrace) match {
+            case None => None
+            case Some(sol) => Some((nTrace, sol))
           }
-        case _ =>
-      }
-      i -= 1
+        }
     }
-
-    res
   }
 
-  private def addFlip(trace: Trace): StTrace = trace map (i => StInstr(i, flipped = false))
+  /** Produces the prefixes of `seq` in increasing order */
+  private def prefixes[A](seq: Seq[A]): Seq[Seq[A]] = seq.indices.map(i => seq.take(i + 1))
 
-  private def isPathCond(instr: StInstr): Boolean = instr.instr.isInstanceOf[PathCond]
+  private def isPC(instr: Instr): Boolean = instr.isInstanceOf[PathCond]
 
-  private def neg(pc: Instr): Instr = pc match {
-    case EqCond(s, t) => NeqCond(s, t)
-    case NeqCond(s, t) => EqCond(s, t)
-    case _ => Err.err(s"Can't negate instruction $pc: not a path condition")
+  /** Negate the instruction if it's a pathc condition */
+  private def neg(instr: Instr): Instr = {
+    instr match {
+      case EqCond(s, t) => NeqCond(s, t)
+      case NeqCond(s, t) => EqCond(s, t)
+      case _ => Err.err(s"Can't flip a non path cond $instr")
+    }
   }
 
   /** Gets the input register values from a `Soln` */
@@ -218,26 +213,39 @@ object Concolic {
     (getInp(soln(0)), getInp(soln(1)))
   }
 
+  private def stripFlipped(trace: StTrace): Trace = trace.map(_.instr)
+
   /** Verifies that a new trace matches a reference one, converting the new one to a `StTrace` in the process. */
   private def adaptTrace(refTrace: StTrace, actualTrace: Trace): Option[StTrace] = {
-    // TODO: optimize
-    val conds = refTrace.filter(isPathCond)
-    val res = collection.mutable.ArrayBuffer.empty[StInstr]
-    var i = 0
-    var currCond = 0
-    while (i < actualTrace.size) {
-      if (currCond >= conds.size || !actualTrace(i).isInstanceOf[PathCond]) {
-        res +=  StInstr(actualTrace(i), flipped = false)
-      } else {
-        if (conds(currCond).instr != actualTrace(i)) {
-          return None
-        } else {
-          res += conds(currCond)
-          currCond += 1
-        }
+    def filterPC(tr: Trace): Trace = tr.filter(isPC)
+    val refPC = filterPC(stripFlipped(refTrace))
+    val actualPC = filterPC(actualTrace)
+
+    if (actualPC.startsWith(refPC) || refPC.startsWith(actualPC)) {
+      val (flippedMap, _) = ((Map.empty[Int, Boolean], 0) /: refTrace) {
+        case ((fmap, idx), instr) =>
+          if (isPC(instr.instr)) {
+            (fmap + (idx -> instr.flipped), idx + 1)
+          } else {
+            (fmap, idx)
+          }
       }
-      i += 1
+      val (rActual, _) = ((Seq.empty[StInstr], 0) /: actualTrace) {
+        case ((rTrace, idx), instr) =>
+          if (isPC(instr)) {
+            val stInstr = if (flippedMap.contains(idx)) {
+              StInstr(instr, flipped = flippedMap(idx))
+            } else {
+              StInstr(instr, flipped = false) // this is a new path condition not previously seen
+            }
+            (stInstr +: rTrace, idx + 1)
+          } else {
+            (StInstr(instr, flipped = false) +: rTrace, idx) // can only flip path conds
+          }
+      }
+      Some(rActual.reverse)
+    } else {
+      None // Our prediction for what the new trace should be is off
     }
-    Some(res)
   }
 }
