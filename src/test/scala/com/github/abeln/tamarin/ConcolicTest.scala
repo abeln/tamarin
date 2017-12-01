@@ -37,6 +37,18 @@ class ConcolicTest extends FlatSpec {
     assertNotEquiv(onePlusTwo, onePlusTwoWrong)
   }
 
+
+  it should "conclude that a program is equal to itself" in {
+    val onePlusTwo = Seq[Code](
+      ADD(Reg(3), Reg(1), Reg(2)),
+      JR(Reg(31))
+    )
+
+    assertMaybeEquiv(onePlusTwo, onePlusTwo)
+  }
+
+
+
   def assertNotEquiv(ref: Program, cand: Program): Unit = {
     val res = compare(ref, cand)
     res shouldBe a [NotEquiv]
