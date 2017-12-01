@@ -21,20 +21,33 @@ object Main {
 
     val skip = new Label("skip")
 
-    val onePlusTwoWrong = Seq[Code](
-      ADD(Reg(3), Reg(1), Reg(2)),
-      LIS(Reg(4)),
-      Word(encodeSigned(42)),
-      LIS(Reg(5)),
-      Word(encodeSigned(103)),
-      bne(Reg(1), Reg(4), skip),
-      bne(Reg(2), Reg(5), skip),
-      ADD(Reg(3), Reg(3), Reg(2)),
-      Define(skip),
-      JR(Reg(31))
+//    val onePlusTwoWrong = Seq[Code](
+//      ADD(Reg(3), Reg(1), Reg(2)),
+//      LIS(Reg(4)),
+//      Word(encodeSigned(42)),
+//      LIS(Reg(5)),
+//      Word(encodeSigned(103)),
+//      bne(Reg(1), Reg(4), skip),
+//      bne(Reg(2), Reg(5), skip),
+//      ADD(Reg(3), Reg(3), Reg(2)),
+//      Define(skip),
+//      JR(Reg(31))
+//    )
+
+    val onePlusTwoCorrect = Seq[Code](
+          ADD(Reg(3), Reg(1), Reg(2)),
+          LIS(Reg(4)),
+          Word(encodeSigned(42)),
+          LIS(Reg(5)),
+          Word(encodeSigned(103)),
+          bne(Reg(1), Reg(4), skip),
+          bne(Reg(2), Reg(5), skip),
+          ADD(Reg(3), Reg(3), Reg(0)),
+          Define(skip),
+          JR(Reg(31))
     )
 
-    println(Concolic.compare(onePlusTwo, onePlusTwoWrong))
+    println(Concolic.compare(onePlusTwo, onePlusTwoCorrect))
 
 //    println(Query.solve(proc(trace(
 //      assign(Reg(2), Lit(2)),
