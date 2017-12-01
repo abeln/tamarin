@@ -2,11 +2,13 @@ package com.github.abeln.tamarin
 
 import com.github.abeln.tamarin.mips.Word
 import com.github.abeln.tamarin.mips.assembler.Assembler.{ADD, JR}
-import com.github.abeln.tamarin.mips.assembler.Reg
+import com.github.abeln.tamarin.mips.assembler.{Assembler, Reg}
 import com.github.abeln.tamarin.mips.code.ProgramRepresentation._
 import org.scalatest.FlatSpec
 import com.github.abeln.tamarin.mips.assembler.Assembler._
 import com.github.abeln.tamarin.Concolic._
+import org.scalatest.Matchers._
+import com.github.abeln.tamarin.mips.code.Transformations
 
 
 class ConcolicTest extends FlatSpec {
@@ -32,6 +34,33 @@ class ConcolicTest extends FlatSpec {
       JR(Reg(31))
     )
 
-    assert(compare(onePlusTwo, onePlusTwoWrong).isInstanceOf[NotEquiv])
+    assertNotEquiv(onePlusTwo, onePlusTwoWrong)
+  }
+
+  def assertNotEquiv(ref: Program, cand: Program): Unit = {
+    val res = compare(ref, cand)
+    res shouldBe a [NotEquiv]
+    val NotEquiv(inps, refSol, candSol) = res
+    refSol should not equal (candSol)
+    val r1 = inps(0)
+    val r2 = inps(1)
+    val actualRef = runProg(ref, r1, r2)
+    val actualCand = runProg(cand, r1, r2)
+    actualRef should equal (refSol)
+    actualCand should equal (candSol)
+  }
+
+  def runProg(prog: Program, r1: Long, r2: Long): Long = {
+    val (finalSt, _) = Assembler.loadAndRun(
+      Transformations.toMachineCode(prog),
+      Word(Assembler.encodeSigned(r1)),
+      Word(Assembler.encodeSigned(r2))
+    )
+    // TODO: don't hardcode the output register
+    Assembler.decodeSigned(finalSt.reg(3))
+  }
+
+  def assertMaybeEquiv(ref: Program, cand: Program): Unit = {
+    compare(ref, cand) should equal (MaybeEquiv)
   }
 }
