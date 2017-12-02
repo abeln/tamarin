@@ -28,68 +28,69 @@ object SSAConv extends TraceMap {
   /** The set of modifiable registers */
   private val mods: Set[Reg] = addressable + LO + HI
 
-  /** Tracks the last-written copy of a register. */
-  private var last: mutable.Map[Reg, Reg] = initLast
-
-  /** Initial state of the `last` map. All registers start up as already-initialized. */
-  private def initLast: mutable.Map[Reg, Reg] = {
-    val modl = mods.toList
-    mutable.Map.empty[Reg, Reg] ++= modl.zip(modl).toMap
-  }
-
   /** Records a mutation of register `r`. Returns the new copy of the register. */
-  private def update(r: Reg): Reg = {
+  private def update(r: Reg)(implicit last: Map[Reg, Reg]): Map[Reg, Reg] = {
     require(mods.contains(r), s"Register ${r.r} isn't modifiable")
-    last += (r -> freshRegister())
-    last(r)
+    last + (r -> freshRegister())
   }
 
   /** Returns the copy of `o` that was last-modified. */
-  private def lookup(o: Operand): Operand = o match {
+  private def lookup(o: Operand)(implicit last: Map[Reg, Reg]): Operand = o match {
     case r: Reg => last(r)
     case _ => o
   }
 
   // Helpers for generic update of source and destination registers
 
-  private def reapply3(f: (Reg, Operand, Operand) => Instr, d: Reg, s: Operand, t: Operand): Instr = {
+  private def reapply3(f: (Reg, Operand, Operand) => Instr, d: Reg, s: Operand, t: Operand)(implicit last: Map[Reg, Reg]): (Map[Reg, Reg], Instr) = {
     // Make sure to look up the read operands *before* updating the destination.
     val o1 = lookup(s)
     val o2 = lookup(t)
-    f(update(d), o1, o2)
+    val newLast = update(d)
+    (newLast, f(newLast(d), o1, o2))
   }
 
-  private def reapply2(f: (Reg, Reg) => Instr, d: Reg, s: Reg): Instr = {
+  private def reapply2(f: (Reg, Reg) => Instr, d: Reg, s: Reg)(implicit last: Map[Reg, Reg]): (Map[Reg, Reg], Instr) = {
     // Look-up operand before updating.
     val o1 = lookup(s)
-    f(update(d), o1.asInstanceOf[Reg])
+    val newLast = update(d)
+    (newLast, f(newLast(d), o1.asInstanceOf[Reg]))
   }
 
   override def apply(trace: Trace): Trace = {
-    // Before converting each instruction, we have to re-initialize the `last` map.
-    last = initLast
-    super.apply(trace)
-  }
+    val modl = mods.toList
+    val initLast = modl.zip(modl).toMap
 
-  override protected def transform: PartialFunction[Instr, Trace] = {
-    case Add(d, s, t) => reapply3(Add, d, s, t)
-    case Sub(d, s, t) => reapply3(Sub, d, s, t)
-    case Slt(d, s, t) => reapply3(Slt, d, s, t)
-    case SltU(d, s, t) => reapply3(SltU, d, s, t)
-    case Mult64(d, s, t) => reapply3(Mult64, d, s, t)
-    case MultU64(d, s, t) => reapply3(MultU64, d, s, t)
-    case Low32(d, s) => reapply2(Low32, d, s)
-    case High32(d, s) => reapply2(High32, d, s)
-    case Quot(d, s, t) => reapply3(Quot, d, s, t)
-    case QuotU(d, s, t) => reapply3(QuotU, d, s, t)
-    case Rem(d, s, t) => reapply3(Rem, d, s, t)
-    case RemU(d, s, t) => reapply3(RemU, d, s, t)
-    case Lw(t, o, s) =>
-      val s2 = lookup(s)
-      Lw(update(t), o, s2)
-    case Sw(t, o, s) => Sw(lookup(t).asInstanceOf[Reg], o, lookup(s))
-    case EqCond(s, t) => EqCond(lookup(s).asInstanceOf[Reg], lookup(t))
-    case NeqCond(s, t) => NeqCond(lookup(s).asInstanceOf[Reg], lookup(t))
-    case instr => err(s"Don't know how to SSA-convert $instr")
+    val (_, revTraces) = ((initLast, Seq.empty[Instr]) /: trace) {
+      case ((lastMap, rTraces), instr) =>
+        implicit val lastM = lastMap
+
+        val (newLast, trace) = instr match {
+          case Add(d, s, t) => reapply3(Add, d, s, t)
+          case Sub(d, s, t) => reapply3(Sub, d, s, t)
+          case Slt(d, s, t) => reapply3(Slt, d, s, t)
+          case SltU(d, s, t) => reapply3(SltU, d, s, t)
+          case Mult64(d, s, t) => reapply3(Mult64, d, s, t)
+          case MultU64(d, s, t) => reapply3(MultU64, d, s, t)
+          case Low32(d, s) => reapply2(Low32, d, s)
+          case High32(d, s) => reapply2(High32, d, s)
+          case Quot(d, s, t) => reapply3(Quot, d, s, t)
+          case QuotU(d, s, t) => reapply3(QuotU, d, s, t)
+          case Rem(d, s, t) => reapply3(Rem, d, s, t)
+          case RemU(d, s, t) => reapply3(RemU, d, s, t)
+          case Lw(t, o, s) =>
+            val s2 = lookup(s)
+            val newLast = update(t)
+            (newLast, Lw(newLast(t), o, s2))
+          case Sw(t, o, s) => (lastM, Sw(lookup(t).asInstanceOf[Reg], o, lookup(s)))
+          case EqCond(s, t) => (lastM, EqCond(lookup(s).asInstanceOf[Reg], lookup(t)))
+          case NeqCond(s, t) => (lastM, NeqCond(lookup(s).asInstanceOf[Reg], lookup(t)))
+          case _ => err(s"Don't know how to SSA-convert $instr")
+        }
+
+        (newLast, trace +: rTraces)
+    }
+
+    revTraces.reverse.flatten
   }
 }

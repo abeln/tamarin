@@ -6,7 +6,15 @@ import com.github.abeln.tamarin.TraceMap.instrToTrace
   * Desugaring of "complicated" MIPS instructions.
   */
 object Desugar extends TraceMap {
-  override protected def transform: PartialFunction[SymInstr.Instr, Trace] = {
+
+  override def apply(trace: Trace): Trace = {
+    trace.flatMap { instr =>
+      if (transform.isDefinedAt(instr)) transform(instr)
+      else instr
+    }
+  }
+
+  private def transform: PartialFunction[SymInstr.Instr, Trace] = {
     case Jalr(concretePC) => assign(savedPC, Lit(concretePC))
     case Mult(s, t) => trace(
       Mult64(TMP, s, t),
