@@ -115,9 +115,17 @@ object Transformations {
     codes filterNot(_.isInstanceOf[Comment])
   }
 
+  def eliminateBlocks(codes: Seq[Code]): Seq[Code] = {
+    codes.flatMap {
+      case Block(cs) => eliminateBlocks(cs)
+      case c => Seq(c)
+    }
+  }
+
   /** Entry point to convert from assembly with labels and comments into machine code. */
   def toMachineCode(codes: Seq[Code]): Seq[Word] = {
-    val noComments = eliminateComments(codes)
+    val noBlocks = eliminateBlocks(codes)
+    val noComments = eliminateComments(noBlocks)
     eliminateLabels(noComments)
   }
 }

@@ -56,5 +56,9 @@ object ProgramRepresentation {
     * a separate table so that it can be shown by the `Debugger` when it executes the generated code.
     */
   case class Comment(message: String) extends Code
+
+  case class Block(codes: Seq[Code]) extends Code
+
+  def block(codes: Code*): Block = Block(codes)
 }
 

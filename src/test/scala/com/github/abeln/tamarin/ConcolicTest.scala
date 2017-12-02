@@ -1,12 +1,12 @@
 package com.github.abeln.tamarin
 
-import com.github.abeln.tamarin.mips.Word
-import com.github.abeln.tamarin.mips.assembler.Assembler.{ADD, JR}
-import com.github.abeln.tamarin.mips.assembler.{Assembler, Reg}
+import com.github.abeln.tamarin.mips.{CPU, Word}
+import com.github.abeln.tamarin.mips.assembler.Assembler._
 import com.github.abeln.tamarin.mips.code.ProgramRepresentation._
 import org.scalatest.FlatSpec
 import com.github.abeln.tamarin.mips.assembler.Assembler._
 import com.github.abeln.tamarin.Concolic._
+import com.github.abeln.tamarin.mips.assembler.Reg
 import org.scalatest.Matchers._
 import com.github.abeln.tamarin.mips.code.Transformations
 
@@ -47,7 +47,157 @@ class ConcolicTest extends FlatSpec {
     assertMaybeEquiv(onePlusTwo, onePlusTwo)
   }
 
+  it should "detect differences in small memory ops" in {
+    val storeAndLoad = Seq[Code](
+      const(Reg.scratch, 100),
+      SW(Reg.input1, 0, Reg.scratch),
+      LW(Reg.result, 0, Reg.scratch),
+      JR(Reg.savedPC)
+    )
 
+    val buggyLabel = new Label("buggy")
+    val storeAndLoadBuggy = Seq[Code](
+      const(Reg.scratch, 100),
+      SW(Reg.input1, 0, Reg.scratch),
+      LW(Reg.result, 0, Reg.scratch),
+      bne(Reg.result, Reg.scratch, buggyLabel),
+      const(Reg.scratch, 42),
+      ADD(Reg.result, Reg.result, Reg.scratch),
+      Define(buggyLabel),
+      JR(Reg.savedPC)
+    )
+
+    assertNotEquiv(storeAndLoad, storeAndLoadBuggy)
+  }
+
+  it should "deal with basic stack manipulations" in {
+    val pushAndPop = Seq[Code](
+      setUpStack,
+      const(Reg.result, 42),
+      push(Reg.result),
+      push(Reg.input1),
+      const(Reg.result, 200),
+      push(Reg.result),
+      pop(Reg.result),
+      pop(Reg.result),
+      JR(Reg.savedPC)
+    )
+
+    val skipBuggy = new Label("skipBuggy")
+
+    val pushAndPopBuggy = Seq[Code](
+      setUpStack,
+      const(Reg.result, 42),
+      push(Reg.result),
+      push(Reg.input1),
+      const(Reg.result, 200),
+      push(Reg.result),
+      pop(Reg.result),
+      pop(Reg.result),
+      const(Reg.scratch, 199),
+      bne(Reg.result, Reg.scratch, skipBuggy),
+      const(Reg.scratch, 100),
+      ADD(Reg.result, Reg.result, Reg.scratch),
+      Define(skipBuggy),
+      JR(Reg.savedPC)
+    )
+
+    assertNotEquiv(pushAndPop, pushAndPopBuggy)
+  }
+
+//  it should "handle function calls" in {
+//    // Correct impl
+//    val succLabel = new Label("succFn")
+//    val succFn = Seq[Code](
+//      Define(succLabel),
+//      push(Reg.savedPC),
+//      push(Reg.framePointer),
+//      ADD(Reg.framePointer, Reg.stackPointer),
+//      LW(Reg.result, 12, Reg.framePointer),
+//      const(Reg.scratch, 1),
+//      ADD(Reg.result, Reg.result, Reg.scratch),
+//      ADD(Reg.stackPointer, Reg.framePointer),
+//      pop(Reg.framePointer),
+//      pop(Reg.savedPC),
+//      JR(Reg.savedPC)
+//    )
+//
+//    val caller = Seq[Code](
+//      setUpStack,
+//      push(Reg.savedPC),
+//      push(Reg.input1),
+//      LIS(Reg.targetPC),
+//      Use(succLabel),
+//      JALR(Reg.targetPC),
+//      pop(Reg.scratch),
+//      pop(Reg.savedPC),
+//      JR(Reg.savedPC)
+//    ) ++ succFn
+//
+//    // Buggy impl
+//    val succBuggyLabel = new Label("succBuggyFn")
+//    val skipLabel = new Label("skip")
+//
+//    val succBuggyFn = Seq[Code](
+//      Define(succLabel),
+//      push(Reg.savedPC),
+//      push(Reg.framePointer),
+//      ADD(Reg.framePointer, Reg.stackPointer),
+//      LW(Reg.result, 12, Reg.framePointer),
+//      const(Reg.scratch, 1),
+//      ADD(Reg.result, Reg.result, Reg.scratch),
+//      const(Reg.scratch, 107),
+//      bne(Reg.result, Reg.scratch, skipLabel),
+//      const(Reg.scratch, 1),
+//      ADD(Reg.result, Reg.result, Reg.scratch),
+//      Define(skipLabel),
+//      ADD(Reg.stackPointer, Reg.framePointer),
+//      pop(Reg.framePointer),
+//      pop(Reg.savedPC),
+//      JR(Reg.savedPC)
+//    )
+//
+//    val callerBuggy = Seq[Code](
+//      setUpStack,
+//      push(Reg.savedPC),
+//      push(Reg.input1),
+//      LIS(Reg.targetPC),
+//      Use(succLabel),
+//      JALR(Reg.targetPC),
+//      pop(Reg.scratch),
+//      pop(Reg.savedPC),
+//      JR(Reg.savedPC)
+//    ) ++ succBuggyFn
+//
+//    assertNotEquiv(caller, callerBuggy)
+//  }
+
+  val setUpStack: Code = block(
+    const(Reg.scratch, CPU.numMaxAddr - 4),
+    ADD(Reg.stackPointer, Reg.scratch),
+    ADD(Reg.framePointer, Reg.stackPointer)
+  )
+
+  def push(r: Reg): Code = {
+    block(
+      const(Reg.scratch, 4),
+      SUB(Reg.stackPointer, Reg.stackPointer, Reg.scratch),
+      SW(r, 0, Reg.stackPointer)
+    )
+  }
+
+  def pop(r: Reg): Code = block(
+    LW(r, 0, Reg.stackPointer),
+    const(Reg.scratch, 4),
+    ADD(Reg.stackPointer, Reg.stackPointer, Reg.scratch)
+  )
+
+  def const(r: Reg, v: Long): Code = {
+    block(
+      LIS(Reg.scratch),
+      Word(encodeSigned(v))
+    )
+  }
 
   def assertNotEquiv(ref: Program, cand: Program): Unit = {
     val res = compare(ref, cand)
@@ -63,13 +213,13 @@ class ConcolicTest extends FlatSpec {
   }
 
   def runProg(prog: Program, r1: Long, r2: Long): Long = {
-    val (finalSt, _) = Assembler.loadAndRun(
+    val (finalSt, _) = loadAndRun(
       Transformations.toMachineCode(prog),
-      Word(Assembler.encodeSigned(r1)),
-      Word(Assembler.encodeSigned(r2))
+      Word(encodeSigned(r1)),
+      Word(encodeSigned(r2))
     )
     // TODO: don't hardcode the output register
-    Assembler.decodeSigned(finalSt.reg(3))
+    decodeSigned(finalSt.reg(3))
   }
 
   def assertMaybeEquiv(ref: Program, cand: Program): Unit = {

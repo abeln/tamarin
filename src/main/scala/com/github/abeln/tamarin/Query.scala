@@ -67,14 +67,14 @@ object Query {
       case Lw(t, _, _) => Seq((t, true))
       case Slt(d, _, _) => Seq((d, true))
       case SltU(d, _, _) => Seq((d, true))
-      case Mult64(d, _, _) => Seq((d, false))
-      case MultU64(d, _, _) => Seq((d, false))
       case Low32(d, _) => Seq((d, true))
       case High32(d, _) => Seq((d, true))
       case Quot(d, _, _) => Seq((d, true))
       case QuotU(d, _, _) => Seq((d, true))
       case Rem(d, _, _) => Seq((d, true))
       case RemU(d, _, _) => Seq((d, true))
+      case Mult64(d, _, _) => Seq((d, false))
+      case MultU64(d, _, _) => Seq((d, false))
       case _ => Seq()
     }.toSet
   }

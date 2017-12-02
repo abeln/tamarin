@@ -28,8 +28,11 @@ object SSAConv extends TraceMap {
   /** The set of modifiable registers */
   private val mods: Set[Reg] = addressable + LO + HI
 
-  /** Tracks the last-written copy of a register. All registers start up as already-initialized. */
-  private val last: mutable.Map[Reg, Reg] = {
+  /** Tracks the last-written copy of a register. */
+  private var last: mutable.Map[Reg, Reg] = initLast
+
+  /** Initial state of the `last` map. All registers start up as already-initialized. */
+  private def initLast: mutable.Map[Reg, Reg] = {
     val modl = mods.toList
     mutable.Map.empty[Reg, Reg] ++= modl.zip(modl).toMap
   }
@@ -60,6 +63,12 @@ object SSAConv extends TraceMap {
     // Look-up operand before updating.
     val o1 = lookup(s)
     f(update(d), o1.asInstanceOf[Reg])
+  }
+
+  override def apply(trace: Trace): Trace = {
+    // Before converting each instruction, we have to re-initialize the `last` map.
+    last = initLast
+    super.apply(trace)
   }
 
   override protected def transform: PartialFunction[Instr, Trace] = {
