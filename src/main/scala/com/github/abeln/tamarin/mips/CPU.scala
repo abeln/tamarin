@@ -204,19 +204,32 @@ object CPU {
     }
   }
 
+  /** Result of a program run */
+  sealed trait RunRes
+  /** The program finished executing before the fuel ran out */
+  case class Done(state: State, trace: Trace) extends RunRes
+  /** The fuel ran out before the program finished executing. Attached is the trace as in the last state. */
+  case class NotDone(trace: Trace) extends RunRes
+
+  val ignoreFuel: Long = -1
+
   /**
     * Run steps of the CPU starting in `state` until it reaches a state when the PC has the value `terminationPC`.
     * Additionally, records a symbolic trace of the program's execution.
+    *
+    * @param fuel the number of steps to run the program for, after which we'll return [[NotDone]]
+    *             if left unspecified (or equal to [[ignoreFuel]]), then it is ignored
     * */
-  def run(state: State): (State, Trace) = {
-    runAcc(state, SymInstr.trace())
+  def run(state: State, fuel: Long = ignoreFuel): RunRes = {
+    runAcc(state, SymInstr.trace(), fuel)
   }
 
-  @tailrec def runAcc(state: State, trace: Trace): (State, Trace) = {
-    if(state.reg(PC) == terminationPC) (state, trace.reverse)
+  @tailrec def runAcc(state: State, trace: Trace, fuel: Long): RunRes = {
+    if(state.reg(PC) == terminationPC) Done(state, trace.reverse)
+    else if (fuel == 0) NotDone(trace.reverse)
     else {
       val (newSt, newTr) = step(state)
-      runAcc(newSt, newTr ++ trace)
+      runAcc(newSt, newTr ++ trace, if (fuel == ignoreFuel) ignoreFuel else fuel - 1)
     }
   }
 

@@ -1,6 +1,7 @@
 package com.github.abeln.tamarin.mips.assembler
 
 import com.github.abeln.tamarin.SymInstr.Trace
+import com.github.abeln.tamarin.mips.CPU.RunRes
 import com.github.abeln.tamarin.mips.{Bits, CPU, State, Word, twoTo}
 
 import scala.collection.mutable
@@ -206,11 +207,11 @@ object Assembler {
     * given `words` into memory, writes the specified values to registers 1 and 2, and then runs
     * the CPU on the `words` that were loaded.
     */
-  def loadAndRun(words: Seq[Word], register1: Word = Word.zero, register2: Word = Word.zero): (State, Trace) = {
+  def loadAndRun(words: Seq[Word], register1: Word = Word.zero, register2: Word = Word.zero, fuel: Long = CPU.ignoreFuel): RunRes = {
     val initialState =
       setMem(words)
         .setReg(1, register1)
         .setReg(2, register2)
-    CPU.run(initialState)
+    CPU.run(initialState, fuel)
   }
 }

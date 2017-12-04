@@ -2,7 +2,7 @@ package com.github.abeln.tamarin
 
 import com.github.abeln.tamarin.Query.{Fixed, RegVal, Soln, Unbound}
 import com.github.abeln.tamarin.SymInstr._
-import com.github.abeln.tamarin.mips.Word
+import com.github.abeln.tamarin.mips.{CPU, Word}
 import com.github.abeln.tamarin.mips.assembler.Assembler
 import com.github.abeln.tamarin.mips.code.ProgramRepresentation.Code
 import com.github.abeln.tamarin.mips.code.Transformations
@@ -30,6 +30,9 @@ object Concolic {
 
   /** The default max depth of the explored path conditions. Larger means more testing, but slower. */
   val pathCondDepth = 42
+
+  /** Default number of steps to run the program for in each iteration */
+  val defaultFuel = 10000
 
   /** Default values for input registers */
   private val defaultInputs: Seq[Long] = Seq.fill(inputRegs.size)(42)
@@ -97,12 +100,14 @@ object Concolic {
             case None => Right(Done)
             case Some((nTrace, soln)) =>
               val (r1, r2) = getInputs(soln)
-              val RunResult(driverRes, driverTrace) = runProg(driver, r1, r2)
-              val RunResult(verifierRes, _) = runProg(verifier, r1, r2)
-              if (driverRes != verifierRes) {
-                Left(Different(Seq(r1, r2), driverRes, verifierRes))
+              val driverRes = runProg(driver, r1, r2)
+              val verifierRes = runProg(verifier, r1, r2)
+              if (!isCompatible(driverRes, verifierRes)) {
+                val ExecDone(driverVal, _) = driverRes
+                val ExecDone(verifierVal, _) = verifierRes
+                Left(Different(Seq(r1, r2), driverVal, verifierVal))
               } else {
-                adaptTrace(nTrace, driverTrace) match {
+                adaptTrace(nTrace, getTrace(driverRes)) match {
                   case None => Right(Done) // TODO: implement restarts
                   case Some(adaptedTrace) => Right(NotDone(driver, adaptedTrace))
                 }
@@ -115,13 +120,15 @@ object Concolic {
       * Returns an initial trace for the driver program (using the provided input register values),
       * or a counter-example if we got lucky.
       **/
-    def init(driver: Program, verifier: Program, r1: Long, r2: Long): Either[Different, NotDone] = {
-      val RunResult(resDriver, traceDriver) = runProg(driver, r1, r2)
-      val RunResult(resVer, _) = runProg(verifier, r1, r2)
-      if (resDriver != resVer) {
-        Left(Different(Seq(r1, r2), resDriver, resVer))
+    def init(driver: Program, verifier: Program, r1: Long, r2: Long): Either[Different, ProgramSt] = {
+      val driverRes = runProg(driver, r1, r2)
+      val verifierRes = runProg(verifier, r1, r2)
+      if (!isCompatible(driverRes, verifierRes)) {
+        val ExecDone(driverVal, _) = driverRes
+        val ExecDone(verifierVal, _) = verifierRes
+        Left(Different(Seq(r1, r2), driverVal, verifierVal))
       } else {
-        Right(NotDone(driver, traceDriver map {instr => StInstr(instr, flipped = false)}))
+        Right(NotDone(driver, getTrace(driverRes) map {instr => StInstr(instr, flipped = false)}))
       }
     }
 
@@ -141,16 +148,44 @@ object Concolic {
   }
 
   /** Result of a program run */
-  private case class RunResult(res: Long, trace: Trace)
+  private sealed trait ExecRes
+  private case class ExecDone(res: Long, trace: Trace) extends ExecRes
+  private case class ExecStopped(trace: Trace) extends ExecRes
 
   /** Runs a program, returning the value of the output register + the symbolic trace */
-  private def runProg(prog: Program, r1: Long, r2: Long)(implicit depth: Int): RunResult = {
-    val (finalSt, trace) = Assembler.loadAndRun(
+  private def runProg(prog: Program, r1: Long, r2: Long)(implicit depth: Int): ExecRes = {
+    val res = Assembler.loadAndRun(
       Transformations.toMachineCode(prog),
       Word(Assembler.encodeSigned(r1)),
-      Word(Assembler.encodeSigned(r2))
+      Word(Assembler.encodeSigned(r2)),
+      defaultFuel
     )
-    RunResult(Assembler.decodeSigned(finalSt.reg(outputReg.r).toSeq), trim(trace, depth))
+    res match {
+      case CPU.Done(st, tr) =>
+        ExecDone(Assembler.decodeSigned(st.reg(outputReg.r).toSeq), trim(tr, depth))
+      case CPU.NotDone(tr) =>
+        ExecStopped(trim(tr, depth))
+    }
+  }
+
+  /**
+    * Determines whether two results are 'compatible'.
+    * The only incompatible results are two [[ExecDone]] with different values in the `res` field.
+    * In particular, if either of the results is [[ExecStopped]], then we conservatively assume the result
+    * would've been the same if we let the program run for long enough.
+    **/
+  private def isCompatible(res1: ExecRes, res2: ExecRes): Boolean = {
+    (res1, res2) match {
+      case (ExecDone(val1, _), ExecDone(val2, _)) if val1 != val2 => false
+      case _ => true
+    }
+  }
+
+  private def getTrace(res: ExecRes): Trace = {
+    res match {
+      case ExecDone(_, tr) => tr
+      case ExecStopped(tr) => tr
+    }
   }
 
   /** Trim `trace` so that it contains at most `depth` path conds */

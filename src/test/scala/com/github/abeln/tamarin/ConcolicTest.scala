@@ -206,18 +206,18 @@ class ConcolicTest extends FlatSpec {
     refSol should not equal (candSol)
     val r1 = inps(0)
     val r2 = inps(1)
-    val actualRef = runProg(ref, r1, r2)
-    val actualCand = runProg(cand, r1, r2)
+    val actualRef = runAndExpectSol(ref, r1, r2)
+    val actualCand = runAndExpectSol(cand, r1, r2)
     actualRef should equal (refSol)
     actualCand should equal (candSol)
   }
 
-  def runProg(prog: Program, r1: Long, r2: Long): Long = {
-    val (finalSt, _) = loadAndRun(
+  def runAndExpectSol(prog: Program, r1: Long, r2: Long): Long = {
+    val CPU.Done(finalSt, _) = loadAndRun(
       Transformations.toMachineCode(prog),
       Word(encodeSigned(r1)),
       Word(encodeSigned(r2))
-    )
+    ).asInstanceOf[CPU.Done]
     // TODO: don't hardcode the output register
     decodeSigned(finalSt.reg(3))
   }
