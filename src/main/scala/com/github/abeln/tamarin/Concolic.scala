@@ -168,7 +168,8 @@ object Concolic {
   /** Interface to the Query module that first simplifies the trace. */
   private def query(trace: StTrace): Option[Soln] = {
     val transform = Desugar andThen SSAConv
-    Query.solve(transform(stripFlipped(trace)))
+    val transTrace = transform(stripFlipped(trace))
+    Query.solve(transTrace)
   }
 
   /** Finds the deepest path condition that can be negated, to force a (potentially) new path. */

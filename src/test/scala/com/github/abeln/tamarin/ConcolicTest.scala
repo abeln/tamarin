@@ -105,72 +105,72 @@ class ConcolicTest extends FlatSpec {
     assertNotEquiv(pushAndPop, pushAndPopBuggy)
   }
 
-//  it should "handle function calls" in {
-//    // Correct impl
-//    val succLabel = new Label("succFn")
-//    val succFn = Seq[Code](
-//      Define(succLabel),
-//      push(Reg.savedPC),
-//      push(Reg.framePointer),
-//      ADD(Reg.framePointer, Reg.stackPointer),
-//      LW(Reg.result, 12, Reg.framePointer),
-//      const(Reg.scratch, 1),
-//      ADD(Reg.result, Reg.result, Reg.scratch),
-//      ADD(Reg.stackPointer, Reg.framePointer),
-//      pop(Reg.framePointer),
-//      pop(Reg.savedPC),
-//      JR(Reg.savedPC)
-//    )
-//
-//    val caller = Seq[Code](
-//      setUpStack,
-//      push(Reg.savedPC),
-//      push(Reg.input1),
-//      LIS(Reg.targetPC),
-//      Use(succLabel),
-//      JALR(Reg.targetPC),
-//      pop(Reg.scratch),
-//      pop(Reg.savedPC),
-//      JR(Reg.savedPC)
-//    ) ++ succFn
-//
-//    // Buggy impl
-//    val succBuggyLabel = new Label("succBuggyFn")
-//    val skipLabel = new Label("skip")
-//
-//    val succBuggyFn = Seq[Code](
-//      Define(succLabel),
-//      push(Reg.savedPC),
-//      push(Reg.framePointer),
-//      ADD(Reg.framePointer, Reg.stackPointer),
-//      LW(Reg.result, 12, Reg.framePointer),
-//      const(Reg.scratch, 1),
-//      ADD(Reg.result, Reg.result, Reg.scratch),
-//      const(Reg.scratch, 107),
-//      bne(Reg.result, Reg.scratch, skipLabel),
-//      const(Reg.scratch, 1),
-//      ADD(Reg.result, Reg.result, Reg.scratch),
-//      Define(skipLabel),
-//      ADD(Reg.stackPointer, Reg.framePointer),
-//      pop(Reg.framePointer),
-//      pop(Reg.savedPC),
-//      JR(Reg.savedPC)
-//    )
-//
-//    val callerBuggy = Seq[Code](
-//      setUpStack,
-//      push(Reg.savedPC),
-//      push(Reg.input1),
-//      LIS(Reg.targetPC),
-//      Use(succLabel),
-//      JALR(Reg.targetPC),
-//      pop(Reg.scratch),
-//      pop(Reg.savedPC),
-//      JR(Reg.savedPC)
-//    ) ++ succBuggyFn
-//
-//    assertNotEquiv(caller, callerBuggy)
-//  }
+  it should "handle function calls" in {
+    // Correct impl
+    val succLabel = new Label("succFn")
+    val succFn = Seq[Code](
+      Define(succLabel),
+      push(Reg.savedPC),
+      push(Reg.framePointer),
+      ADD(Reg.framePointer, Reg.stackPointer),
+      LW(Reg.result, 8, Reg.framePointer),
+      const(Reg.scratch, 1),
+      ADD(Reg.result, Reg.result, Reg.scratch),
+      ADD(Reg.stackPointer, Reg.framePointer),
+      pop(Reg.framePointer),
+      pop(Reg.savedPC),
+      JR(Reg.savedPC)
+    )
+
+    val caller = Seq[Code](
+      setUpStack,
+      push(Reg.savedPC),
+      push(Reg.input1),
+      LIS(Reg.targetPC),
+      Use(succLabel),
+      JALR(Reg.targetPC),
+      pop(Reg.scratch),
+      pop(Reg.savedPC),
+      JR(Reg.savedPC)
+    ) ++ succFn
+
+    // Buggy impl
+    val succBuggyLabel = new Label("succBuggyFn")
+    val skipLabel = new Label("skip")
+
+    val succBuggyFn = Seq[Code](
+      Define(succBuggyLabel),
+      push(Reg.savedPC),
+      push(Reg.framePointer),
+      ADD(Reg.framePointer, Reg.stackPointer),
+      LW(Reg.result, 8, Reg.framePointer),
+      const(Reg.scratch, 1),
+      ADD(Reg.result, Reg.result, Reg.scratch),
+      const(Reg.scratch, 107),
+      bne(Reg.result, Reg.scratch, skipLabel),
+      const(Reg.scratch, 1),
+      ADD(Reg.result, Reg.result, Reg.scratch),
+      Define(skipLabel),
+      ADD(Reg.stackPointer, Reg.framePointer),
+      pop(Reg.framePointer),
+      pop(Reg.savedPC),
+      JR(Reg.savedPC)
+    )
+
+    val callerBuggy = Seq[Code](
+      setUpStack,
+      push(Reg.savedPC),
+      push(Reg.input1),
+      LIS(Reg.targetPC),
+      Use(succBuggyLabel),
+      JALR(Reg.targetPC),
+      pop(Reg.scratch),
+      pop(Reg.savedPC),
+      JR(Reg.savedPC)
+    ) ++ succBuggyFn
+
+    assertNotEquiv(caller, callerBuggy)
+  }
 
   val setUpStack: Code = block(
     const(Reg.scratch, CPU.numMaxAddr - 4),
