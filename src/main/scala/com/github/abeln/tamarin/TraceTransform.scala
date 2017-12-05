@@ -151,13 +151,15 @@ object TraceTransform {
 
   /**
     * Takes a trace as returned by the CPU, and transforms it so it can be consumed by the SMT solver.
+    *
+    * @param depth the maximum depth (number of path conditions) of the traces we want to generate
     */
   def go(trace: Trace)(implicit depth: Int): Trace = {
     // These are all composed in-order.
     val phases = Seq[Trace => Trace](
       desugar, // this should go first, since the other phases assume they won't see some of the eliminated forms
       simplify,
-      trim, // should go after simplify, so we don't trim trivial path conditions
+      trim, // should go after simplify, so we don't trim based on trivial path conditions
       convertToSSA
     )
 
