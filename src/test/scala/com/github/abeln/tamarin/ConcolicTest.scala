@@ -197,6 +197,21 @@ class ConcolicTest extends FlatSpec {
     assertNotEquiv(prog1, prog2)
   }
 
+  it should "handle infinite loops by limiting the number of steps" in {
+    val startLoop = new Label("startLoop")
+    val prog1 = Seq[Code](
+      ADD(Reg.scratch, Reg.zero),
+      Define(startLoop),
+      beq(Reg.zero, Reg.scratch, startLoop)
+    )
+
+    val prog2 = Seq[Code](
+      JR(Reg.savedPC)
+    )
+
+    assertMaybeEquiv(prog1, prog2)
+  }
+
   val setUpStack: Code = block(
     const(Reg.scratch, CPU.numMaxAddr - 4),
     ADD(Reg.stackPointer, Reg.scratch),
