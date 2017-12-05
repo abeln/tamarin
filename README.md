@@ -1,4 +1,6 @@
 # Tamarin
+![Image of a tamarin](https://github.com/abeln/tamarin/blob/master/logo.png)
+
 Tamarin is a tool for establishing program equivalence for MIPS programs.
 
 That is, given two MIPS assembly programs, Tamarin returns
