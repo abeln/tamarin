@@ -29,7 +29,7 @@ object Concolic {
   private case class StInstr(instr: Instr, flipped: Boolean)
 
   /** The default max depth of the explored path conditions. Larger means more testing, but slower. */
-  val pathCondDepth = 42
+  val pathCondDepth = 50
 
   /** Default number of steps to run the program for in each iteration */
   val defaultFuel = 10000
@@ -162,9 +162,9 @@ object Concolic {
     )
     res match {
       case CPU.Done(st, tr) =>
-        ExecDone(Assembler.decodeSigned(st.reg(outputReg.r).toSeq), trim(tr, depth))
+        ExecDone(Assembler.decodeSigned(st.reg(outputReg.r).toSeq), TraceTransform.go(tr))
       case CPU.NotDone(tr) =>
-        ExecStopped(trim(tr, depth))
+        ExecStopped(TraceTransform.go(tr))
     }
   }
 
@@ -188,23 +188,9 @@ object Concolic {
     }
   }
 
-  /** Trim `trace` so that it contains at most `depth` path conds */
-  private def trim(trace: Trace, depth: Int): Trace = {
-    var pc = 0
-    trace.takeWhile { instr =>
-      if (pc > depth) false
-      else {
-        if (isPC(instr)) pc += 1
-        true
-      }
-    }
-  }
-
   /** Interface to the Query module that first simplifies the trace. */
   private def query(trace: StTrace): Option[Soln] = {
-    val transform = Desugar andThen SSAConv
-    val transTrace = transform(stripFlipped(trace))
-    Query.solve(transTrace)
+    Query.solve(stripFlipped(trace))
   }
 
   /** Finds the deepest path condition that can be negated, to force a (potentially) new path. */
@@ -227,8 +213,6 @@ object Concolic {
 
   /** Produces the prefixes of `seq` in increasing order */
   private def prefixes[A](seq: Seq[A]): Seq[Seq[A]] = seq.indices.map(i => seq.take(i + 1))
-
-  private def isPC(instr: Instr): Boolean = instr.isInstanceOf[PathCond]
 
   /** Negate the instruction if it's a pathc condition */
   private def neg(instr: Instr): Instr = {

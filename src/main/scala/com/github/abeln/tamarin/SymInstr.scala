@@ -81,4 +81,6 @@ object SymInstr {
   case class EqCond(s: Operand, t: Operand) extends Instr with PathCond
   case class NeqCond(s: Operand, t: Operand) extends Instr with PathCond
   // jr doesn't show up here because we don't symbolically track the state of the PC.
+
+  def isPC(instr: Instr): Boolean = instr.isInstanceOf[PathCond]
 }

@@ -172,6 +172,32 @@ class ConcolicTest extends FlatSpec {
     assertNotEquiv(caller, callerBuggy)
   }
 
+  it should "handle loops" in {
+    val startLoop = new Label("startLoop")
+    val endLoop = new Label("endLoop")
+
+    val prog1 = Seq[Code](
+      const(Reg.scratch, 1),
+      Define(startLoop),
+      SLT(Reg.result, Reg.scratch, Reg.input1),
+      beq(Reg.result, Reg.zero, endLoop),
+      const(Reg.input2, 1),
+      ADD(Reg.scratch, Reg.scratch, Reg.input2),
+      beq(Reg.zero, Reg.zero, startLoop),
+      Define(endLoop),
+      const(Reg.input2, 45),
+      SLT(Reg.result, Reg.scratch, Reg.input2),
+      JR(Reg.savedPC)
+    )
+
+    val prog2 = Seq[Code](
+      const(Reg.result, 1),
+      JR(Reg.savedPC)
+    )
+
+    assertNotEquiv(prog1, prog2)
+  }
+
   val setUpStack: Code = block(
     const(Reg.scratch, CPU.numMaxAddr - 4),
     ADD(Reg.stackPointer, Reg.scratch),
@@ -194,7 +220,7 @@ class ConcolicTest extends FlatSpec {
 
   def const(r: Reg, v: Long): Code = {
     block(
-      LIS(Reg.scratch),
+      LIS(r),
       Word(encodeSigned(v))
     )
   }
