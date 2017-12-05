@@ -1,7 +1,6 @@
 package com.github.abeln.tamarin
 
 import com.github.abeln.tamarin.mips.{CPU, Word}
-import com.github.abeln.tamarin.mips.assembler.Assembler._
 import com.github.abeln.tamarin.mips.code.ProgramRepresentation._
 import org.scalatest.FlatSpec
 import com.github.abeln.tamarin.mips.assembler.Assembler._
