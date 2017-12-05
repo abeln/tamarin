@@ -1,5 +1,5 @@
-# Tamarin
-![Image of a tamarin](https://github.com/abeln/tamarin/blob/master/logo.png)
+# Tamarin 
+<img src="https://github.com/abeln/tamarin/blob/master/logo.png" width="100" alt="logo of a tamarin monkey"> 
 
 Tamarin is a tool for establishing program equivalence for MIPS programs.
 
