@@ -49,10 +49,18 @@ object Concolic {
   /** The two programs are possibly equivalent (no difference in output was detected) */
   case object MaybeEquiv extends Res
   /** The two programs are _definitely not_ equivalent, together with input/output witnesses */
-  case class NotEquiv(inputs: Seq[Long], ref: Long, cand: Long) extends Res
+  case class NotEquiv(inputs: Seq[Long], ref: ProgRes, cand: ProgRes) extends Res
+
+  /** The result of executing a program. */
+  sealed trait ProgRes
+  /** The program produced an error. */
+  case object ErrorRes extends ProgRes
+  /** The program returned the given value in the output register. */
+  case class ValRes(v: Long) extends ProgRes
+
 
   /** A version of [[NotEquiv]] that uses 'driver' and 'verifier' (varying) as opposed to 'ref' and 'cand' (constant) */
-  private case class Different(inputs: Seq[Long], driverRes: Long, verifierRes: Long)
+  private case class Different(inputs: Seq[Long], driverRes: ProgRes, verifierRes: ProgRes)
 
   /**
     * Entry point to the concolic tester. Given two programs, finds out if they're not equivalent.
@@ -103,9 +111,7 @@ object Concolic {
               val driverRes = runProg(driver, r1, r2)
               val verifierRes = runProg(verifier, r1, r2)
               if (!isCompatible(driverRes, verifierRes)) {
-                val ExecDone(driverVal, _) = driverRes
-                val ExecDone(verifierVal, _) = verifierRes
-                Left(Different(Seq(r1, r2), driverVal, verifierVal))
+                Left(Different(Seq(r1, r2), toProgRes(driverRes), toProgRes(verifierRes)))
               } else {
                 adaptTrace(nTrace, getTrace(driverRes)) match {
                   case None => Right(Done) // TODO: implement restarts
@@ -124,9 +130,7 @@ object Concolic {
       val driverRes = runProg(driver, r1, r2)
       val verifierRes = runProg(verifier, r1, r2)
       if (!isCompatible(driverRes, verifierRes)) {
-        val ExecDone(driverVal, _) = driverRes
-        val ExecDone(verifierVal, _) = verifierRes
-        Left(Different(Seq(r1, r2), driverVal, verifierVal))
+        Left(Different(Seq(r1, r2), toProgRes(driverRes), toProgRes(verifierRes)))
       } else {
         Right(NotDone(driver, getTrace(driverRes) map {instr => StInstr(instr, flipped = false)}))
       }
@@ -147,10 +151,17 @@ object Concolic {
     }
   }
 
+  private def toProgRes(res: ExecRes): ProgRes = res match {
+    case ExecDone(v, _) => ValRes(v)
+    case ExecError(_) => ErrorRes
+    case _ => Err.err(s"Can't convert to `ProgRes`: $res")
+  }
+
   /** Result of a program run */
   private sealed trait ExecRes
   private case class ExecDone(res: Long, trace: Trace) extends ExecRes
   private case class ExecStopped(trace: Trace) extends ExecRes
+  private case class ExecError(e: RuntimeException) extends ExecRes
 
   /** Runs a program, returning the value of the output register + the symbolic trace */
   private def runProg(prog: Program, r1: Long, r2: Long)(implicit depth: Int): ExecRes = {
@@ -165,18 +176,22 @@ object Concolic {
         ExecDone(Assembler.decodeSigned(st.reg(outputReg.r).toSeq), TraceTransform.go(tr))
       case CPU.NotDone(tr) =>
         ExecStopped(TraceTransform.go(tr))
+      case CPU.Error(e) =>
+        ExecError(e)
     }
   }
 
   /**
     * Determines whether two results are 'compatible'.
-    * The only incompatible results are two [[ExecDone]] with different values in the `res` field.
-    * In particular, if either of the results is [[ExecStopped]], then we conservatively assume the result
-    * would've been the same if we let the program run for long enough.
+    *
+    * If either of the results is [[ExecStopped]], then we conservatively assume it
+    * would've been the same as the other one if we let the program run for long enough.
     **/
   private def isCompatible(res1: ExecRes, res2: ExecRes): Boolean = {
     (res1, res2) match {
       case (ExecDone(val1, _), ExecDone(val2, _)) if val1 != val2 => false
+      case (ExecError(_), _) if !res2.isInstanceOf[ExecError] => false
+      case (_, ExecError(_)) if !res1.isInstanceOf[ExecError] => false
       case _ => true
     }
   }

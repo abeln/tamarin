@@ -212,6 +212,26 @@ class ConcolicTest extends FlatSpec {
     assertMaybeEquiv(prog1, prog2)
   }
 
+  it should "handle CPU exceptions" in {
+    val incorrect = Seq[Code](
+      DIV(Reg.input1, Reg.input2),
+      MFLO(Reg.result),
+      JR(Reg.savedPC)
+    )
+
+    val end = new Label("end")
+    val correct = Seq[Code](
+      ADD(Reg.result, Reg.zero), // n/0 == 0,
+      beq(Reg.input2, Reg.zero, end),
+      DIV(Reg.input1, Reg.input2),
+      MFLO(Reg.result),
+      Define(end),
+      JR(Reg.savedPC)
+    )
+    
+    assertNotEquiv(correct, incorrect)
+  }
+
   val setUpStack: Code = block(
     const(Reg.scratch, CPU.numMaxAddr - 4),
     ADD(Reg.stackPointer, Reg.scratch),
@@ -248,21 +268,37 @@ class ConcolicTest extends FlatSpec {
     val r2 = inps(1)
     val actualRef = runAndExpectSol(ref, r1, r2)
     val actualCand = runAndExpectSol(cand, r1, r2)
-    actualRef should equal (refSol)
-    actualCand should equal (candSol)
+    assertCompat(actualRef, refSol)
+    assertCompat(actualCand, candSol)
   }
 
-  def runAndExpectSol(prog: Program, r1: Long, r2: Long): Long = {
-    val CPU.Done(finalSt, _) = loadAndRun(
+  def runAndExpectSol(prog: Program, r1: Long, r2: Long): Option[Long] = {
+    val res = loadAndRun(
       Transformations.toMachineCode(prog),
       Word(encodeSigned(r1)),
       Word(encodeSigned(r2))
-    ).asInstanceOf[CPU.Done]
-    // TODO: don't hardcode the output register
-    decodeSigned(finalSt.reg(3))
+    )
+    res match {
+      case CPU.Done(finalSt, _) =>
+       // TODO: don't hardcode the output register
+       Some(decodeSigned(finalSt.reg(3)))
+      case CPU.Error(err) =>
+        None
+    }
   }
 
   def assertMaybeEquiv(ref: Program, cand: Program): Unit = {
     compare(ref, cand) should equal (MaybeEquiv)
+  }
+
+  def assertCompat(actual: Option[Long], expected: ProgRes): Unit = {
+    (actual, expected) match {
+      case (None, ErrorRes) =>
+        ()
+      case (Some(actualVal), ValRes(expectedVal)) =>
+        actualVal should equal (expectedVal)
+      case _ =>
+        fail(s"Incompatible results| actual: $actual | expected: $expected")
+    }
   }
 }

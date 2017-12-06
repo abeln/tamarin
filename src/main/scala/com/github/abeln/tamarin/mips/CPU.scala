@@ -210,6 +210,8 @@ object CPU {
   case class Done(state: State, trace: Trace) extends RunRes
   /** The fuel ran out before the program finished executing. Attached is the trace as in the last state. */
   case class NotDone(trace: Trace) extends RunRes
+  /** The CPU errored out while running the program (because of a program error). */
+  case class Error(ex: RuntimeException) extends RunRes
 
   val ignoreFuel: Long = -1
 
@@ -221,7 +223,11 @@ object CPU {
     *             if left unspecified (or equal to [[ignoreFuel]]), then it is ignored
     * */
   def run(state: State, fuel: Long = ignoreFuel): RunRes = {
-    runAcc(state, SymInstr.trace(), fuel)
+    try {
+      runAcc(state, SymInstr.trace(), fuel)
+    } catch {
+      case e: RuntimeException => Error(e)
+    }
   }
 
   @tailrec def runAcc(state: State, trace: Trace, fuel: Long): RunRes = {
@@ -246,7 +252,7 @@ object CPU {
   /** The special address for producing output. When a word is stored to this address, the low-order 8 bits of
     * that word are written to standard output.
     */
-  val printAddr =     Word("11111111111111110000000000001100")
+  val printAddr = Word("11111111111111110000000000001100")
 
   private[mips] var outputStream = System.out
 }
