@@ -1,5 +1,10 @@
 \documentclass{llncs}
 
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+\newcommand\crule[3][black]{\textcolor{#1}{\rule{#2}{#3}}}
+
 \title{Tamarin: Concolic Program Disequivalence for MIPS}
 \author{Abel Nieto}
 \institute{
@@ -17,6 +22,28 @@ TODO
 
 \section{Introduction}
 
+We are staring at two opaque black boxes laying at our feet. Each box has a narrow slot through which we can place items in the box, but we cannot quite see what is inside. They look approximately like this:
+
+\vspace{1mm}
+\crule{1.5cm}{1.5cm}, \crule{1.5cm}{1.5cm}
+\vspace{1mm}
+
+We know each box contains an animal, but we do not know which specific animal is in each one. We would like to find out if both boxes contain the same species of animal. Our solution is simple: we take two carrots, and drop one in each box through the slots.
+
+After a while, a chewing sound emerges from the boxes. We peer into them and, indeed, it looks like the carrots were successfully eaten. Triumphantly, we declare that the boxes contain the same species of animal. The truth is altogether different:
+
+\vspace{1mm}
+\fbox{\includegraphics[width=1.5cm]{camel}}, \fbox{\includegraphics[width=1.5cm]{beaver}}
+\vspace{1mm}
+
+The boxes are assembly programs. The animals are the functions those programs compute. The carrot is unit testing. The task was to determine whether the programs were equivalent. And we failed at it. In this paper, we show a technique that is better than the carrot.
+
+Program equivalence. The program is the specification. The complications of assembly language.
+
+\section{Concolic Program Disequivalence}
+
+General Idea.
+
 \section{Tamarin}
 
 Overview.
@@ -33,7 +60,9 @@ Desugaring, simplification, trimming, and conversion to SSA.
 
 Memory, jumps, arithmetic operators.
 
-\subsection{Concolic Execution}
+\subsection{Concolic Execution Redux}
+
+Alternation. Compatibility. Soundness/Completeness. Efficiency.
 
 \section{Evaluation}
 
