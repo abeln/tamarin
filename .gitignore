@@ -1,3 +1,10 @@
 project/
 target/
 .idea/
+.DS_STORE
+*.aux
+*.log
+*.bbl
+*.blg
+report/*.gz
+*.toc
