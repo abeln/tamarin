@@ -8,6 +8,7 @@
 \usepackage{cancel}
 \usepackage{tikz}
 \usetikzlibrary{shapes,backgrounds}
+\usepackage{algpseudocode}
 
 \newcommand{\crule}[3][black]{\textcolor{#1}{\rule{#2}{#3}}}
 
@@ -200,7 +201,45 @@ To fill the missing relation in Figure \ref{hierarchy} we propose concolic diseq
 \item ``possibly equivalent'', meaning that $P_1$ and $P_2$ might or might not be $S$-equivalent.
 \end{itemize}
 
-\textsf{concolic} does this by alternately executing $P_1$ and $P_2$, concolically. At every step, one of the programs is labelled as the ``driver'' and the other one as the ``verifier''. The driver program is then concolically executed, yielding a set of inputs that exercise a new program path (of the driver). The inputs can then be fed to the verifier, and the results of both driver and verifier compared. If the results are different, then we know $P_1$ and $P_2$ are disequivalent. Otherwise, the driver becomes the verifier, and vice-versa. Eventually, we will traverse all explorable paths, at which point $P_1$ and $P_2$ can be declared possibly equivalent.
+Figure \ref{concolicalgo} shows pseudocode for \textsf{concolic}.The algorithm alternately executes $P_1$ and $P_2$. At every step, one of the programs is labelled as the ``driver'' and the other one as the ``verifier''. The driver program is then concolically executed, yielding a set of inputs that exercise a new program path (of the driver). The inputs can then be fed to the verifier, and the results of both driver and verifier compared. If the results are different, then we know $P_1$ and $P_2$ are disequivalent. Otherwise, the driver becomes the verifier, and vice-versa. Eventually, we will traverse all explorable paths, at which point $P_1$ and $P_2$ can be declared possibly equivalent.
+
+\begin{figure}
+\begin{algorithmic}
+\Function{concolic}{$P_1$, $P_2$, $S$}
+\State $b \gets true$
+\While{either $P_1$ or $P_2$ has unexplored paths}
+  \If{$b$} \Comment{Select driver and verifier}
+    \State $D \gets P_1$
+    \State $V \gets P_2$
+  \Else
+    \State $D \gets P_2$
+    \State $V \gets P_1$
+  \EndIf
+  \If{$D$ has unexplored paths}
+    \State $I \gets$ new inputs that exercise an unexplored path
+    \State $R_1 \gets \textsf{run}(P_1, I, S)$
+    \State $R_2 \gets \textsf{run}(P_2, I, S)$
+    \If{both $P_1$ and $P_2$ stopped}
+      \If{both $P_1$ and $P_2$ stopped with an error}
+      \State \Comment{do nothing}
+      \ElsIf{either $P_1$ or $P_2$ stopped with an error}
+        \State \Return{``disequivalent''}
+      \Else
+        \If{$R_1 \neq R_2$}
+          \State \Return{``disequivalent''}
+        \EndIf
+      \EndIf
+    \EndIf
+    \State mark the path discovered by $I$ as explored
+    \State $b \gets \neg b$
+  \EndIf
+\EndWhile
+\State \Return{``possibly equivalent''}
+\EndFunction
+\end{algorithmic}
+\label{concolicalgo}
+\caption{Concolic disequivalence algorithm}
+\end{figure}
 
 \section{Tamarin}
 
