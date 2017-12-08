@@ -174,7 +174,7 @@ Corollary \ref{soundness} can be used to argue the soundness (with respect to $\
 
 \section{Concolic Disequivalence}
 
-
+We know from Corollary \ref{soundness} that any relation that under-approximates $\cancel{\merel{S}}$ is sound. Figure \ref{hierarchy}  shows why want an under-approximation: efficiency. $\cancel{\erel}$ captures the class of programs that are disequivalent, but is undecidable. $\cancel{\merel{S}}$ is decidable, but likely cannot be computed efficiently. Therefore, we look for a subset of $\cancel{\merel{S}}$ (an under-approximation) that can be efficiently computed.
 
 \begin{figure}
 \def\firstcircle{(0,-1.8cm) circle (1.2cm)}
@@ -193,6 +193,14 @@ Corollary \ref{soundness} can be used to argue the soundness (with respect to $\
 \label{hierarchy}
 \caption{Hierarchy of disequivalence relations}
 \end{figure}
+
+To fill the missing relation in Figure \ref{hierarchy} we propose concolic disequivalence. Abstractly, concolic disequivalence is a function $\textsf{concolic}(P_1, P_2, S)$ that takes as inputs two MIPS programs and returns one of two answers:
+\begin{itemize}
+\item ``disequivalent'', in which case $\pnmequiv{P_1}{P_2}{S}$.
+\item ``possibly equivalent'', meaning that $P_1$ and $P_2$ might or might not be $S$-equivalent.
+\end{itemize}
+
+\textsf{concolic} does this by alternately executing $P_1$ and $P_2$, concolically. At every step, one of the programs is labelled as the ``driver'' and the other one as the ``verifier''. The driver program is then concolically executed, yielding a set of inputs that exercise a new program path (of the driver). The inputs can then be fed to the verifier, and the results of both driver and verifier compared. If the results are different, then we know $P_1$ and $P_2$ are disequivalent. Otherwise, the driver becomes the verifier, and vice-versa. Eventually, we will traverse all explorable paths, at which point $P_1$ and $P_2$ can be declared possibly equivalent.
 
 \section{Tamarin}
 
