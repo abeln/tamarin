@@ -4,6 +4,8 @@
 \usepackage{xcolor}
 \usepackage{listings}
 \usepackage{mips}
+\usepackage{amsmath}
+\usepackage{cancel}
 
 \newcommand{\crule}[3][black]{\textcolor{#1}{\rule{#2}{#3}}}
 
@@ -11,6 +13,8 @@
 \newcommand{\merel}[1]{\textsf{equiv}_{#1}}
 \newcommand{\pequiv}[2]{#1 \ \erel \ #2}
 \newcommand{\pmequiv}[3]{#1 \ \merel{#3} \ #2}
+\newcommand{\pnequiv}[2]{#1 \ \cancel{\erel} \ #2}
+\newcommand{\pnmequiv}[3]{#1 \ \cancel{\merel{#3}} \ #2}
 
 \definecolor{CommentGreen}{rgb}{0,.6,0}
 \lstset{
@@ -63,13 +67,20 @@ The boxes are assembly programs. The animals are the functions those programs co
 
 Program equivalence. The program is the specification. The complications of assembly language.
 
-\section{Program Disequivalence for MIPS}
+\section{Program Equivalence for MIPS}
 
-Let us set up the problem a bit more formally. Consider the set $P$ of MIPS-assembly programs that satisfy two restrictions: they take as inputs only the values of registers $\$1$ and $\$2$, and when they stop executing we define their output to be (exclusively) the value of $\$3$. Other side effects, such as printing values to the screen or system calls, are disallowed.
+Let us set up the problem a bit more formally. Consider the set $P$ of MIPS-assembly programs that satisfy two restrictions: they take as inputs only the values of registers $\$1$ and $\$2$, and when they stop executing we define their output to be (exclusively) the value of $\$3$. Other side effects, such as printing values to the screen, or system calls, are disallowed.
 
-We can now define a relation $\erel \subseteq P \times P$ of equivalent programs. Given $P_1, P_2 \in P$, we say that $\pequiv{P_1}{P_2}$ (read ``$P_1$ is equivalent to $P_2$'') if $P_1$ and $P_2$ produce the same output (the same value of $\$3$), respectively, for all  inputs (for all values of $\$1$ and $\$2$). For example, the two following programs are equivalent:
+We can now define a relation $\erel \subseteq P \times P$ of equivalent programs. Given $P_1, P_2 \in P$, we say that $\pequiv{P_1}{P_2}$ (read ``$P_1$ is equivalent to $P_2$'') if, for all inputs $\$1$ and $\$2$, one of the following holds:
+\begin{itemize}
+\item Both $P_1$ and $P_2$ fail during execution (for example, due to a divide-by-zero error).
+\item $P_1$ and $P_2$ stop with the same output in $\$3$. 
+\end{itemize} 
+
+For example, the two programs in Figure \ref{equivprogs} are equivalent.
  
- \begin{multicols}{2}
+\begin{figure}
+\begin{multicols}{2}
 \begin{lstlisting}[escapeinside={(*}{*)}]
 # P_1
 add $3, $1, $2
@@ -85,6 +96,9 @@ sw $4, 0, $5
 add $3, $1, $2
 \end{lstlisting}
 \end{multicols}
+\caption{$\pequiv{P_1}{P_2}$}
+\label{equivprogs}
+\end{figure}
 
 Notice that $\pequiv{P_1}{P_2}$ even though $P_2$ modifies the contents of the memory and an additional register ($\$4$), because:
 \begin{itemize}
@@ -94,9 +108,69 @@ Notice that $\pequiv{P_1}{P_2}$ even though $P_2$ modifies the contents of the m
 
 Unfortunately, even though $\erel$ captures an already-simplified notion of equivalence\footnote{For example, $\erel$ has a very narrow notion of output that excludes side effects.}, a decision procedure for it does not exist, due to Rice's theorem.
 
-To get decidability back, we define a new class of relations $\merel{S} \subseteq P \times P$. We say that $\pmequiv{P_1}{P_2}{S}$, read ``$P_1$ is potentially equivalent to $P_2$ up to $S$ steps'' if 
+To get decidability back, we define a new class of relations $\merel{S} \subseteq P \times P$. We say that $\pmequiv{P_1}{P_2}{S}$ (read ``$P_1$ is $S$-equivalent to $P_2$'') if, for all inputs, one of the following holds:
+\begin{itemize}
+\item Either $P_1$ or $P_2$ does not stop within $S$ steps (we can think of each CPU cycle as one step).
+\item Both $P_1$ and $P_2$ fail.
+\item Both $P_1$ and $P_2$ stop with the same output. 
+\end{itemize}
 
-\section{Concolic Program Disequivalence}
+The $\merel{S}$ relation captures the notion that we cannot tell $P_1$ and $P_2$ apart by running them for at most $S$ steps. Figure \ref{sequiv} shows an example of two programs that are $S$-equivalent for $S=10$, but not equivalent. This is the case because $P_2$ loops while the counter is less than $42$, so with 10 steps in our ``budget'' we will have to stop $P_2$ before the loop is over and we can observe the different result.
+
+\begin{figure}
+\begin{multicols}{2}
+\begin{lstlisting}[escapeinside={(*}{*)}]
+# P_1
+add $3, $1, $2
+\end{lstlisting}
+\vfill\null
+\columnbreak
+\begin{lstlisting}
+# P_2
+  add $4, $0, 1  # counter
+  add $5, $0, 42 # upper bound
+loop:
+  slt $6, $4, $5 
+  beq $6, $0, end
+  add $4, $4, 1
+  beq $0, $0, loop
+end:
+  add $3, $1, $1  
+\end{lstlisting}
+\end{multicols}
+\caption{$\pmequiv{P_1}{P_2}{10}$, but $\pnequiv{P_1}{P_2}$}.
+\label{sequiv}
+\end{figure}
+
+Given a fixed $S$, the $\merel{S}$ relation is decidable because there is a finite number of inputs to try, and for each input we only need to run the programs a finite number of steps.
+
+We already saw that equivalence not always implies $S$-equivalence. However, the converse always holds. The following lemma shows that $\merel{S}$ over-approximates $\erel$.
+
+\begin{lemma}
+\label{overapprox}
+$\forall S, P_1, P_2$, $\pequiv{P_1}{P_2} \implies \pmequiv{P_1}{P_2}{S}$.
+\end{lemma}
+
+\begin{proof}
+Let $\pequiv{P_1}{P_2}$. Then we have one of two cases:
+\begin{itemize}
+\item Either $P_1$ or $P_2$ (or both) do not stop within S steps. Then by definition $\pmequiv{P_1}{P_2}{S}$.
+\item Both $P_1$ and $P_2$ stop within S steps. Then because they are equivalent, we know that they either fail with an error, or both stop with the same output. In either case, $\pmequiv{P_1}{P_2}{S}$.
+\end{itemize}
+\end{proof}
+
+\begin{corollary}
+\label{soundness}
+$\pnmequiv{P_1}{P_2}{S} \implies \pnequiv{P_1}{P_2}$. 
+\end{corollary}
+
+\begin{proof}
+This is just the contrapositive of Lemma \ref{overapprox}.
+\end{proof}
+
+Corollary \ref{soundness} can be used to argue the soundness (with respect to $\erel$) of any decision procedure that over-approximates $\merel{S}$. In the next section we will show one such over-approximation based on concolic execution.
+
+\section{Concolic Disequivalence}
 
 
 \section{Tamarin}
