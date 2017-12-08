@@ -2,8 +2,31 @@
 
 \usepackage{graphicx}
 \usepackage{xcolor}
+\usepackage{listings}
+\usepackage{mips}
 
-\newcommand\crule[3][black]{\textcolor{#1}{\rule{#2}{#3}}}
+\newcommand{\crule}[3][black]{\textcolor{#1}{\rule{#2}{#3}}}
+
+\newcommand{\erel}{\textsf{equiv}}
+\newcommand{\merel}[1]{\textsf{equiv}_{#1}}
+\newcommand{\pequiv}[2]{#1 \ \erel \ #2}
+\newcommand{\pmequiv}[3]{#1 \ \merel{#3} \ #2}
+
+\definecolor{CommentGreen}{rgb}{0,.6,0}
+\lstset{
+ language=[mips]Assembler,
+ escapechar=@, % include LaTeX code between `@' characters
+ keepspaces,   % needed to preserve spacing with lstinline
+ basicstyle=\footnotesize\ttfamily\bfseries,
+ commentstyle=\color{CommentGreen},
+ stringstyle=\color{cyan},
+ showstringspaces=false,
+ keywordstyle=[1]\color{blue},    % instructions
+ keywordstyle=[2]\color{magenta}, % directives
+ keywordstyle=[3]\color{red},     % registers
+ }
+ 
+\lstset{language=[mips]Assembler}
 
 \title{Tamarin: Concolic Program Disequivalence for MIPS}
 \author{Abel Nieto}
@@ -40,9 +63,41 @@ The boxes are assembly programs. The animals are the functions those programs co
 
 Program equivalence. The program is the specification. The complications of assembly language.
 
+\section{Program Disequivalence for MIPS}
+
+Let us set up the problem a bit more formally. Consider the set $P$ of MIPS-assembly programs that satisfy two restrictions: they take as inputs only the values of registers $\$1$ and $\$2$, and when they stop executing we define their output to be (exclusively) the value of $\$3$. Other side effects, such as printing values to the screen or system calls, are disallowed.
+
+We can now define a relation $\erel \subseteq P \times P$ of equivalent programs. Given $P_1, P_2 \in P$, we say that $\pequiv{P_1}{P_2}$ (read ``$P_1$ is equivalent to $P_2$'') if $P_1$ and $P_2$ produce the same output (the same value of $\$3$), respectively, for all  inputs (for all values of $\$1$ and $\$2$). For example, the two following programs are equivalent:
+ 
+ \begin{multicols}{2}
+\begin{lstlisting}[escapeinside={(*}{*)}]
+# P_1
+add $3, $1, $2
+\end{lstlisting}
+\vfill\null
+\columnbreak
+\begin{lstlisting}
+# P_2
+add $4, $1, $1
+lis $5
+42
+sw $4, 0, $5
+add $3, $1, $2
+\end{lstlisting}
+\end{multicols}
+
+Notice that $\pequiv{P_1}{P_2}$ even though $P_2$ modifies the contents of the memory and an additional register ($\$4$), because:
+\begin{itemize}
+\item Both $P_1$ and $P_2$ terminate without errors.
+\item The value of $\$3$ will be the same when they do so.
+\end{itemize}
+
+Unfortunately, even though $\erel$ captures an already-simplified notion of equivalence\footnote{For example, $\erel$ has a very narrow notion of output that excludes side effects.}, a decision procedure for it does not exist, due to Rice's theorem.
+
+To get decidability back, we define a new class of relations $\merel{S} \subseteq P \times P$. We say that $\pmequiv{P_1}{P_2}{S}$, read ``$P_1$ is potentially equivalent to $P_2$ up to $S$ steps'' if 
+
 \section{Concolic Program Disequivalence}
 
-General Idea.
 
 \section{Tamarin}
 
