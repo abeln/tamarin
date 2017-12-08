@@ -6,6 +6,8 @@
 \usepackage{mips}
 \usepackage{amsmath}
 \usepackage{cancel}
+\usepackage{tikz}
+\usetikzlibrary{shapes,backgrounds}
 
 \newcommand{\crule}[3][black]{\textcolor{#1}{\rule{#2}{#3}}}
 
@@ -172,6 +174,19 @@ Corollary \ref{soundness} can be used to argue the soundness (with respect to $\
 
 \section{Concolic Disequivalence}
 
+\def\firstcircle{(0,-1.8cm) circle (1.2cm)}
+\def\secondcircle{(0,-1cm) circle (2cm)}
+\def\thirdcircle{(0,0) circle (3cm)}
+\begin{tikzpicture}
+    \begin{scope}[shift={(3cm,-5cm)}]
+        \draw[fill=green,opacity=0.1] \firstcircle;
+        \draw[fill=yellow,opacity=0.1] \secondcircle;
+        \draw[fill=red,opacity=0.1] \thirdcircle;
+        \draw (0, -2) node  {??? (efficient)};
+        \draw (0, 0) node {$\cancel{\merel{S}}$ (inefficient)};
+        \draw (0, 2) node  {$\cancel{\erel}$ (undecidable)};
+    \end{scope}
+\end{tikzpicture}
 
 \section{Tamarin}
 
