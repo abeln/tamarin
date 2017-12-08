@@ -73,7 +73,7 @@ Program equivalence. The program is the specification. The complications of asse
 
 Let us set up the problem a bit more formally. Consider the set $P$ of MIPS-assembly programs that satisfy two restrictions: they take as inputs only the values of registers $\$1$ and $\$2$, and when they stop executing we define their output to be (exclusively) the value of $\$3$. Other side effects, such as printing values to the screen, or system calls, are disallowed.
 
-We can now define a relation $\erel \subseteq P \times P$ of equivalent programs. Given $P_1, P_2 \in P$, we say that $\pequiv{P_1}{P_2}$ (read ``$P_1$ is equivalent to $P_2$'') if, for all inputs $\$1$ and $\$2$, one of the following holds:
+We can now define a relation $\erel \subseteq P \times P$ (and its complement, $\cancel{\erel}$) of equivalent programs. Given $P_1, P_2 \in P$, we say that $\pequiv{P_1}{P_2}$ (read ``$P_1$ is equivalent to $P_2$'') if, for all inputs $\$1$ and $\$2$, one of the following holds:
 \begin{itemize}
 \item Both $P_1$ and $P_2$ fail during execution (for example, due to a divide-by-zero error).
 \item $P_1$ and $P_2$ stop with the same output in $\$3$. 
@@ -110,7 +110,7 @@ Notice that $\pequiv{P_1}{P_2}$ even though $P_2$ modifies the contents of the m
 
 Unfortunately, even though $\erel$ captures an already-simplified notion of equivalence\footnote{For example, $\erel$ has a very narrow notion of output that excludes side effects.}, a decision procedure for it does not exist, due to Rice's theorem.
 
-To get decidability back, we define a new class of relations $\merel{S} \subseteq P \times P$. We say that $\pmequiv{P_1}{P_2}{S}$ (read ``$P_1$ is $S$-equivalent to $P_2$'') if, for all inputs, one of the following holds:
+To get decidability back, we define a new class of relations $\merel{S} \subseteq P \times P$ (whose complement is $\cancel{\merel{S}}$). We say that $\pmequiv{P_1}{P_2}{S}$ (read ``$P_1$ is $S$-equivalent to $P_2$'') if, for all inputs, one of the following holds:
 \begin{itemize}
 \item Either $P_1$ or $P_2$ does not stop within $S$ steps (we can think of each CPU cycle as one step).
 \item Both $P_1$ and $P_2$ fail.
@@ -170,15 +170,18 @@ $\pnmequiv{P_1}{P_2}{S} \implies \pnequiv{P_1}{P_2}$.
 This is just the contrapositive of Lemma \ref{overapprox}.
 \end{proof}
 
-Corollary \ref{soundness} can be used to argue the soundness (with respect to $\erel$) of any decision procedure that over-approximates $\merel{S}$. In the next section we will show one such over-approximation based on concolic execution.
+Corollary \ref{soundness} can be used to argue the soundness (with respect to $\cancel{\erel}$) of any decision procedure that under-approximates $\cancel{\merel{S}}$. In the next section we will show one such under-approximation based on concolic execution.
 
 \section{Concolic Disequivalence}
 
+
+
+\begin{figure}
 \def\firstcircle{(0,-1.8cm) circle (1.2cm)}
 \def\secondcircle{(0,-1cm) circle (2cm)}
 \def\thirdcircle{(0,0) circle (3cm)}
 \begin{tikzpicture}
-    \begin{scope}[shift={(3cm,-5cm)}]
+    \begin{scope}
         \draw[fill=green,opacity=0.1] \firstcircle;
         \draw[fill=yellow,opacity=0.1] \secondcircle;
         \draw[fill=red,opacity=0.1] \thirdcircle;
@@ -187,6 +190,9 @@ Corollary \ref{soundness} can be used to argue the soundness (with respect to $\
         \draw (0, 2) node  {$\cancel{\erel}$ (undecidable)};
     \end{scope}
 \end{tikzpicture}
+\label{hierarchy}
+\caption{Hierarchy of disequivalence relations}
+\end{figure}
 
 \section{Tamarin}
 
