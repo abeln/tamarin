@@ -8,3 +8,4 @@ target/
 *.blg
 report/*.gz
 *.toc
+*.dvi
