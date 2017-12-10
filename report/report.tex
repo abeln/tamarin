@@ -371,7 +371,12 @@ Notice that due to \textsf{fuel} parameter and error boxing, the augmented emula
 
 While the emulator is executing a program, it also records a symbolic trace of (most of) the executed instructions. We support a subset of the MIPS instruction set, containing 18 instruction types \cite{mipsinstructions}. Notably, unlike in full MIPS, there are no system calls in our supported subset.
 
-The fetch-decode-execute cycle in our emulator is modified to record a symbolic representation of each instruction as it is executed (Figure \ref{cpucycle}). The symbolic instructions are then stored in a trace.
+The fetch-decode-execute cycle in our emulator is modified to record a symbolic representation of each instruction as it is executed (Figure \ref{cpucycle}). The symbolic instructions are then stored in a trace. There are two types of instructions in a trace: assignments and path conditions.
+\begin{itemize}
+\item Assignments are instructions that mutate the CPU state, but do not affect the control flow. The symbolic form of most assignments is very similar to the concrete instruction that is executed. For example, the symbolic representation of the instruction \lstinline{add $3, $1, $2} is $r_3 \gets r_1 + r_2$. 
+
+\item Path conditions are instructions that modify the control flow of the program. This set potentially contains both conditional and unconditional jumps, but we track only conditional ones. Specifically, we record the branch taken at each conditional jump, and symbolically record it as an (in)equality. For example, if the branch \lstinline{beq $1, $2, foolabel} is not taken, then we will add $r_1 \neq r_2$ to our trace.
+\end{itemize}
 
 \begin{figure}
 \begin{tikzpicture}[node distance = 2cm, auto]
@@ -391,6 +396,30 @@ The fetch-decode-execute cycle in our emulator is modified to record a symbolic 
 \caption{Instrumented CPU that records symbolic traces}
 \label{cpucycle}
 \end{figure}
+
+One additional point of note: the program counter (\textsf{pc}) is not symbolically tracked. This means Tamarin cannot reason about unconditional jumps, so only a single path is explored for the program in Figure \ref{pcnottrack}. There, Tamarin will execute $P$ with the initial inputs (a hard-coded constant) and error out, because the jump will lead to an invalid instruction. Tamarin will miss the fact that $\$1$ and $\$2$ can be given values such that we could jump to either of the labels, leading to a successful  execution. 
+
+\begin{figure}
+\begin{lstlisting}
+# P
+  add $4, $1, $2
+  jr $4
+good:
+  add $3, $1, $2
+  jr $31 # $31 contains the termination pc
+bad:
+  add $3, $1, $1
+  jr $31    
+\end{lstlisting} 
+\caption{Not tracking the \textsf{pc} leads to under-approximations}
+\label{pcnottrack}
+\end{figure}
+
+Since the \textsf{pc} is not tracked, whenever its value is used in another instruction, we need to substitute the \textsf{pc} by its concrete value. This technique is called concretization \cite{david2016specification}. For example, the load immediate and skip instruction has the following semantics:
+
+\lstinline{lis $d} \hspace{5cm} $d \gets Mem[pc]; pc \gets pc + 4$
+
+
 
 \subsection{Transformations}
 
