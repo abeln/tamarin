@@ -7,6 +7,7 @@
 \usepackage{amsmath}
 \usepackage{cancel}
 \usepackage{tikz}
+\usepackage{url}
 \usetikzlibrary{shapes,backgrounds,arrows, fit}
 \usepackage{algpseudocode}
 
@@ -283,10 +284,14 @@ Run & Driver & Verifier & $\$1$ & $\$2$ & Path & $R_D$ & $R_V$ \\
 
 \section{Tamarin}
 
-Tamarin\footnote{Tamarins are small-sized monkeys from Central and South America. They are related to marmosets, which are also New World monkeys, and less-importantly give name to the black-box submission and testing server in use at the University of Waterloo as of Fall 2017 \cite{spacco2006marmoset}.} is a Scala implementation of the \textsf{compare} algorithm from Section \ref{ideasection}. We first give an overview of the major components of Tamarin, shown in Figure \ref{tamarinstructure}, and then describe them in more detail in subsequent sections:
+Tamarin\footnote{Tamarins are small-sized monkeys from Central and South America. They are related to marmosets, which are also New World monkeys, and less-importantly give name to the black-box submission and testing server in use at the University of Waterloo as of Fall 2017 \cite{spacco2006marmoset}.} is a Scala implementation of the \textsf{compare} algorithm from Section \ref{ideasection}. We first give an overview of the major modules in Tamarin, shown in Figure \ref{tamarinstructure}, and then describe them in more detail in subsequent sections:
 
 \begin{itemize}
-\item TODO
+\item \textsf{Concolic} is the entry point to Tamarin. It implements the top-level loop that visits unexplored paths, alternating between the two programs being compared. \textsf{Concolic} uses the other modules as helpers (in Figure \ref{tamarinstructure}, requests made by a module appear as solid lines, and responses to prior requests are shown with dashed lines).
+\item \textsf{CPU} is a MIPS emulator that is instrumented to record symbolic traces containing path conditions, which can later be negated to explore new paths.
+\item \textsf{Trace} consumes raw traces coming from \textsf{CPU} and transforms them in multiple ways so that they can be handed over to the \textsf{Z3} solver.
+\item \textsf{Query} translates (modified) \textsf{CPU} traces into equivalent logical formulae. The formulae are then solved by the \textsf{Z3} solver, producing new inputs that, if fed to the program under test, will lead to traversing unexplored paths.
+\item \textsf{Z3} is an SMT solver developed at Microsoft \cite{de2008z3}. We use it as black box for solving queries, over the theories of bitvectors and arrays, that result from program traces.
 \end{itemize}
 
 \begin{figure}
@@ -310,7 +315,7 @@ Tamarin\footnote{Tamarins are small-sized monkeys from Central and South America
     \node [block, below of=trace, right of=trace, node distance=3cm] (query) {Query};
     \node [block, fill=red!20, below of=query, node distance=3cm] (z3) {Z3};
     \node [draw=black, dashed, fit= (concolic) (cpu) (trace) (query)] {};
-    
+    \node at (-5.3, 3.3) {Tamarin};
     
 %    % Draw edges
     \draw [line] (concolic) -- (cpu) node [midway, fill=white] {program};
@@ -343,7 +348,7 @@ CPU instrumentation, PC concretization, error boxing, and fuel.
 
 Desugaring, simplification, trimming, and conversion to SSA.
 
-\subsection{Query Representation}
+\subsection{Queries}
 
 Memory, jumps, arithmetic operators.
 
