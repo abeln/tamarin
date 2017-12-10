@@ -8,7 +8,7 @@
 \usepackage{cancel}
 \usepackage{tikz}
 \usepackage{url}
-\usetikzlibrary{shapes,backgrounds,arrows, fit}
+\usetikzlibrary{shapes,backgrounds,arrows, fit, positioning}
 \usepackage{algpseudocode}
 
 \newcommand{\crule}[3][black]{\textcolor{#1}{\rule{#2}{#3}}}
@@ -342,7 +342,55 @@ Tamarin\footnote{Tamarins are small-sized monkeys from Central and South America
 
 \subsection{Trace Collection}
 
-CPU instrumentation, PC concretization, error boxing, and fuel.
+The \textsf{CPU} module is in charge of running MIPS programs and collecting symbolic traces from executions. It is based on the MIPS emulator written by Ond\v{r}ej Lhot\'{a}k for CS241E at the University of Waterloo \cite{cs241e}.
+
+The interface to the module consists of a single function:
+
+\begin{lstlisting}[language=scala]
+def run(prog: Seq[Word], r1: Word, r2: Word, fuel: Long): RunRes
+\end{lstlisting}
+
+The \textsf{run} function takes as input a program represented as as sequence of words, the values of registers $\$1$ and $\$2$ (the inputs to the program) and a \textsf{fuel} value (explained below).
+
+The output is an algebraic data type \textsf{RunRes} that can take one of three forms:
+
+\begin{lstlisting}[language=scala]
+trait RunRes
+case class Done(state: State, trace: Trace) extends RunRes
+case class NotDone(trace: Trace) extends RunRes
+case class Error(ex: RuntimeException) extends RunRes
+\end{lstlisting}
+
+\begin{itemize}
+\item If the program executes without error, then \textsf{Done(state, trace)} is returned. \textsf{state} is the state of the CPU after execution, including the contents of memory (which are ignored) and of register $\$3$, the output register. \textsf{trace} is the symbolic trace captured during the program's execution, and is described below.
+\item If the program ran for more than \textsf{fuel} CPU cycles without stopping, then the result is \textsf{NotDone(trace)}. Notice that even though the program did not stop we can still return a trace recording the execution right until the moment we stopped it. The \textsf{fuel} argument to \textsf{run} plays the same role as the $S$ argument in Figure \ref{concolicalgo}. 
+\item Finally, if there was an error during program execution (for example, an attempted division-by-zero), then we return \textsf{Error}.
+\end{itemize}
+
+Notice that due to \textsf{fuel} parameter and error boxing, the augmented emulator in Tamarin, unlike a vanilla MIPS emulator, is ``hardened'' in the sense that it can execute MIPS programs that do not stop (the emulator itself will stop) or throw errors (will be catched at the top level by the emulator). 
+
+While the emulator is executing a program, it also records a symbolic trace of (most of) the executed instructions. We support a subset of the MIPS instruction set, containing 18 instruction types \cite{mipsinstructions}. Notably, unlike in full MIPS, there are no system calls in our supported subset.
+
+The fetch-decode-execute cycle in our emulator is modified to record a symbolic representation of each instruction as it is executed (Figure \ref{cpucycle}).
+
+\begin{figure}
+\begin{tikzpicture}[node distance = 2cm, auto]
+\node [draw] (fetch) {Fetch};
+\node [draw, below of=fetch] (decode) {Decode};
+\node [draw, below of=decode] (execute) {Execute};
+\node [draw, right=2cm of decode] (symb) {MakeSymbolic};
+\node [draw, right=2cm of symb, minimum height=4cm, text width=1.15cm] (trace) {};
+\node [below right, text width=1cm] at (trace.north west) {Trace symb$_1$ symb$_2$ $\ldots$ symb$_{n - 1}$};
+
+\draw [-latex] (fetch) -- (decode) node [midway] {word$_n$};
+\draw [-latex] (decode) -- (execute) node [midway] {instr$_n$};
+\draw [-latex, bend left=50] (execute) edge (fetch);
+\draw [-latex] (decode) -- (symb) node [midway] {instr$_n$};
+\draw [-latex] (symb) -- (trace) node [midway] {symb$_n$};
+\end{tikzpicture}
+\caption{Instrumented CPU that records symbolic traces}
+\label{cpucycle}
+\end{figure}
 
 \subsection{Transformations}
 
