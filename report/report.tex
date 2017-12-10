@@ -371,7 +371,7 @@ Notice that due to \textsf{fuel} parameter and error boxing, the augmented emula
 
 While the emulator is executing a program, it also records a symbolic trace of (most of) the executed instructions. We support a subset of the MIPS instruction set, containing 18 instruction types \cite{mipsinstructions}. Notably, unlike in full MIPS, there are no system calls in our supported subset.
 
-The fetch-decode-execute cycle in our emulator is modified to record a symbolic representation of each instruction as it is executed (Figure \ref{cpucycle}).
+The fetch-decode-execute cycle in our emulator is modified to record a symbolic representation of each instruction as it is executed (Figure \ref{cpucycle}). The symbolic instructions are then stored in a trace.
 
 \begin{figure}
 \begin{tikzpicture}[node distance = 2cm, auto]
