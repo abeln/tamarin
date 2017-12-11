@@ -270,7 +270,7 @@ Notice that in order to uncover the different, it is necessary to concolically e
 
 \begin{figure}
 \begin{tabular}{l | l | l | l | l | l | l | l}
-Run & Driver & Verifier & $\$1$ & $\$2$ & Path & $R_D$ & $R_V$ \\
+\textbf{Run} & \textbf{Driver} & \textbf{Verifier} & $\mathbf{\$1}$ & $\mathbf{\$2}$ & \textbf{Path} & $\mathbf{R_D}$ & $\mathbf{R_V}$ \\
 \hline 
 1 & $P_1$ & $P_2$ & 1 & 1 & $\$1 \neq 42$ & 2 & 2 \\
 2 & $P_2$ & $P_1$ & 1 & 1 & $\$2 \neq 100$ & 2 & 2\\
@@ -432,9 +432,32 @@ def transform(trace: Trace, depth: Int): Trace
 
 \textsf{transform} takes as input a trace that was produced by \textsf{CPU} and a \textsf{depth} parameter (explained below), and modifies the input trace so that it can be later converted into a logical formula. The \textsf{depth} parameter limits the number of path conditions in the outputted trace: this is so we can bound the depth of our DFS as we explore new paths (see Section \ref{redux} for more details). In effect, we can think of traces as the intermediate representation (IR) for queries to the SMT solver. The \textsf{Transform} module can be then thought of as lowering the semantic complexity of traces.
 
-Internally, \textsf{Transform} consists of multiple ``mini-phases'', each of type \lstinline{Trace => Trace}, which are sequentially applied to the input. The mini-phases are described below.
+Internally, \textsf{Transform} consists of multiple phases, each of type \lstinline{Trace => Trace}, which are sequentially applied to the input. They are described below.
 
 \subsubsection{Desugaring}
+
+ The desugaring phase removes ``complicated'' instructions by replacing them with simpler ones. Table \ref{desugar} summarizes some of the transformations.
+ 
+\begin{figure}
+\begin{tabular}{l | l}
+\textbf{Input} & \textbf{Output} \\
+$Jalr(concretePC)$ & $Add(\$31, concretePC)$ \\
+$Mult(s, t)$ & $Mult64(tmp, s, t); Low32(lo, tmp); High32(hi, tmp)$ \\
+$Div(s, t)$ & $Quot(lo, s, t); Rem(hi, s, t)$ \\
+$Mflo(d)$ & $Add(d, lo, 0)$
+\end{tabular}
+\caption{Desugared instructions}
+\label{desugar}
+\end{figure}
+
+A couple of points of interest:
+\begin{itemize}
+\item $\$31$ holds by convention the return address of the current procedure. Since the \textsf{pc} is not tracked, its concretized value is used.
+
+\item Notice how some instructions (e.g. $Mult$) are desugared into multiple instructions: this is because they in fact have more than one side effect in the CPU state.
+
+\item While desugaring some instructions, we introduce ``helper'' instructions like $Mult64$ and $Quot$ that are not part of the MIPS instruction set. These instructions help communicate the intended semantics to the SMT solver. For example, later on we will see that the contents of registers are represented with 32-bit vectors, but multiplication of two 32-bit integers can take up to 64 bits of storage, so we need a way to let the solver know that it should upcast the product of two registers (so we can later decompose it into the low and high 32-bits): the $Mult64$ instruction accomplishes this.
+\end{itemize}
 
 \subsubsection{Simplification}
 
