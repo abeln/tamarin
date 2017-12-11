@@ -372,13 +372,13 @@ Notice that due to \textsf{fuel} parameter and error boxing, the augmented emula
 While the emulator is executing a program, it also records a symbolic trace of (most of) the executed instructions. We support a subset of the MIPS instruction set, containing 18 instruction types \cite{mipsinstructions}. Notably, unlike in full MIPS, there are no system calls in our supported subset.
 
 \begin{figure}
-\begin{tikzpicture}[node distance = 2cm, auto]
+\begin{tikzpicture}[node distance = 1.5cm, auto]
 \node [draw] (fetch) {Fetch};
-\node [draw, below of=fetch] (decode) {Decode};
-\node [draw, below of=decode] (execute) {Execute};
+\node [draw, below of=fetch, right of=fetch] (decode) {Decode};
+\node [draw, below of=decode, left of=decode] (execute) {Execute};
 \node [draw, right=2cm of decode] (symb) {MakeSymbolic};
-\node [draw, right=2cm of symb, minimum height=4cm, text width=1.15cm] (trace) {};
-\node [below right, text width=1cm] at (trace.north west) {Trace symb$_1$ symb$_2$ $\ldots$ symb$_{n - 1}$};
+\node [draw, right=2cm of symb, minimum height=2.5cm, text width=1.15cm] (trace) {};
+\node [below right, text width=1cm] at (trace.north west) {Trace symb$_1$ symb$_2$ $\ldots$ symb$_{n - 1}$ \textcolor{blue}{symb$_n$}};
 
 \draw [-latex] (fetch) -- (decode) node [midway] {word$_n$};
 \draw [-latex] (decode) -- (execute) node [midway] {instr$_n$};
