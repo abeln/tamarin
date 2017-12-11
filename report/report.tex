@@ -415,10 +415,11 @@ bad:
 \label{pcnottrack}
 \end{figure}
 
-Since the \textsf{pc} is not tracked, whenever its value is used in another instruction, we need to substitute the \textsf{pc} by its concrete value. This technique is called concretization \cite{david2016specification}. For example, the load immediate and skip instruction has the following semantics:
+Since the \textsf{pc} is not tracked, whenever it is used in another instruction we need to substitute it by its concrete value. This technique is called concretization \cite{david2016specification}. For example, the load immediate and skip instruction has the following semantics:
 
-\lstinline{lis $d} \hspace{5cm} $d \gets Mem[pc]; pc \gets pc + 4$
+\lstinline{lis $d} \hspace{2cm} $d \gets Mem[pc]; pc \gets pc + 4$
 
+Instead of the (precise) interpretation above, we use concretization to generate the (under-approximating) symbolic instruction $d \gets v$, where $v$ is the value at the address following the \lstinline{lis} instruction.
 
 
 \subsection{Transformations}
