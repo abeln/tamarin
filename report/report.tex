@@ -424,13 +424,30 @@ Instead of the (precise) interpretation above, we use concretization to generate
 
 \subsection{Transformations}
 
-Desugaring, simplification, trimming, and conversion to SSA.
+The \textsf{Trace} module also exposes just a single function:
+
+\begin{lstlisting}[language=scala]
+def transform(trace: Trace, depth: Int): Trace
+\end{lstlisting}
+
+\textsf{transform} takes as input a trace that was produced by \textsf{CPU} and a \textsf{depth} parameter (explained below), and modifies the input trace so that it can be later converted into a logical formula. The \textsf{depth} parameter limits the number of path conditions in the outputted trace: this is so we can bound the depth of our DFS as we explore new paths (see Section \ref{redux} for more details). In effect, we can think of traces as the intermediate representation (IR) for queries to the SMT solver. The \textsf{Transform} module can be then thought of as lowering the semantic complexity of traces.
+
+Internally, \textsf{Transform} consists of multiple ``mini-phases'', each of type \lstinline{Trace => Trace}, which are sequentially applied to the input. The mini-phases are described below.
+
+\subsubsection{Desugaring}
+
+\subsubsection{Simplification}
+
+\subsubsection{Trimming}
+
+\subsubsection{SSA conversion}
 
 \subsection{Queries}
 
 Memory, jumps, arithmetic operators.
 
 \subsection{Concolic Execution Redux}
+\label{redux}
 
 Alternation. Compatibility. Soundness/Completeness. Efficiency.
 
