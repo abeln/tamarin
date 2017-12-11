@@ -311,11 +311,11 @@ Tamarin\footnote{Tamarins are small-sized monkeys from Central and South America
     % Place nodes
     \node [mainblock] (concolic) {Concolic};
     \node [block, left of=concolic, node distance=5cm] (cpu) {CPU};
-    \node [block, above of=concolic, right of=concolic, node distance=3cm] (trace) {Trace};
-    \node [block, below of=trace, right of=trace, node distance=3cm] (query) {Query};
-    \node [block, fill=red!20, below of=query, node distance=3cm] (z3) {Z3};
+    \node [block, above of=concolic, right of=concolic, node distance=2cm] (trace) {Trace};
+    \node [block, below of=trace, right of=trace, node distance=2.5cm] (query) {Query};
+    \node [block, fill=red!20, right of=query, node distance=4cm] (z3) {Z3};
     \node [draw=black, dashed, fit= (concolic) (cpu) (trace) (query)] {};
-    \node at (-5.3, 3.3) {Tamarin};
+    \node at (-5.3, 3) {Tamarin};
     
 %    % Draw edges
     \draw [line] (concolic) -- (cpu) node [midway, fill=white] {program};
@@ -371,13 +371,6 @@ Notice that due to \textsf{fuel} parameter and error boxing, the augmented emula
 
 While the emulator is executing a program, it also records a symbolic trace of (most of) the executed instructions. We support a subset of the MIPS instruction set, containing 18 instruction types \cite{mipsinstructions}. Notably, unlike in full MIPS, there are no system calls in our supported subset.
 
-The fetch-decode-execute cycle in our emulator is modified to record a symbolic representation of each instruction as it is executed (Figure \ref{cpucycle}). The symbolic instructions are then stored in a trace. There are two types of instructions in a trace: assignments and path conditions.
-\begin{itemize}
-\item Assignments are instructions that mutate the CPU state, but do not affect the control flow. The symbolic form of most assignments is very similar to the concrete instruction that is executed. For example, the symbolic representation of the instruction \lstinline{add $3, $1, $2} is $r_3 \gets r_1 + r_2$. 
-
-\item Path conditions are instructions that modify the control flow of the program. This set potentially contains both conditional and unconditional jumps, but we track only conditional ones. Specifically, we record the branch taken at each conditional jump, and symbolically record it as an (in)equality. For example, if the branch \lstinline{beq $1, $2, foolabel} is not taken, then we will add $r_1 \neq r_2$ to our trace.
-\end{itemize}
-
 \begin{figure}
 \begin{tikzpicture}[node distance = 2cm, auto]
 \node [draw] (fetch) {Fetch};
@@ -396,6 +389,13 @@ The fetch-decode-execute cycle in our emulator is modified to record a symbolic 
 \caption{Instrumented CPU that records symbolic traces}
 \label{cpucycle}
 \end{figure}
+
+The fetch-decode-execute cycle in our emulator is modified to record a symbolic representation of each instruction as it is executed (Figure \ref{cpucycle}). The symbolic instructions are then stored in a trace. There are two types of instructions in a trace: assignments and path conditions.
+\begin{itemize}
+\item Assignments are instructions that mutate the CPU state, but do not affect the control flow. The symbolic form of most assignments is very similar to the concrete instruction that is executed. For example, the symbolic representation of the instruction \lstinline{add $3, $1, $2} is $r_3 \gets r_1 + r_2$. 
+
+\item Path conditions are instructions that modify the control flow of the program. This set potentially contains both conditional and unconditional jumps, but we track only conditional ones. Specifically, we record the branch taken at each conditional jump, and symbolically record it as an (in)equality. For example, if the branch \lstinline{beq $1, $2, foolabel} is not taken, then we will add $r_1 \neq r_2$ to our trace.
+\end{itemize}
 
 One additional point of note: the program counter (\textsf{pc}) is not symbolically tracked. This means Tamarin cannot reason about unconditional jumps, so only a single path is explored for the program in Figure \ref{pcnottrack}. There, Tamarin will execute $P$ with the initial inputs (a hard-coded constant) and error out, because the jump will lead to an invalid instruction. Tamarin will miss the fact that $\$1$ and $\$2$ can be given values such that we could jump to either of the labels, leading to a successful  execution. 
 
