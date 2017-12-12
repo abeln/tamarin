@@ -534,7 +534,57 @@ A \textsf{RegVal} represents the value of a register in the model returned by th
 
 \subsubsection{Translation}
 
-%
+\begin{figure}
+\begin{multicols}{3}
+program:
+\begin{lstlisting}
+  add $3, $1, $2
+  slt $4, $1, $2
+  lis $5
+  1
+  beq $4, $5, skip
+  add $6, $3, $1
+skip:
+\end{lstlisting}
+
+\vfill\null
+\columnbreak
+
+trace:
+\begin{lstlisting}
+  add $3, $1, $2
+  slt $4, $1, $2
+  lis $5
+  1
+  $4 == $5
+\end{lstlisting}
+
+\vfill\null
+\columnbreak
+
+formula:
+\begin{lstlisting}[language=Lisp]
+(declare-const r1 (_ BitVec 32))
+(declare-const r2 (_ BitVec 32))
+(declare-const r3 (_ BitVec 32))
+(declare-const r4 (_ BitVec 32))
+(declare-const r5 (_ BitVec 32))
+
+(assert (= r3 (bvadd r1 r2)))
+(assert
+  (= r4 (ite (bvslt r1 r2)
+    (_ bv1 32)
+    (_ bv0 32))))
+(assert (= r5 (_ bv1 32)))
+(assert (not (= r4 r5)))
+
+(check-sat)
+(get-model)
+\end{lstlisting}
+\end{multicols}
+\caption{A sample program, a trace in it, and the trace's representation as a logical formula}
+\end{figure}
+
 
 \subsubsection{Memory Representation}
 
