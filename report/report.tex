@@ -468,6 +468,7 @@ The simplification phase removes trivial path conditions, like \lstinline{beq 0,
 The trimming phase just shortens the trace so that it contains at most \textsf{depth} (an argument to \textsf{transform}) path conditions. This is so we can do a bounded DFS (again, see Section \ref{redux}) to limit the search space.
 
 \subsubsection{SSA Conversion}
+\label{ssaconv}
 
 The SSA phase converts traces into static single assignment (SSA) form \cite{cytron1991efficiently}. SSA form is crucial to be able to transform a trace into the corresponding logical formula. Consider the example in Figure \ref{ssa}, which shows a small trace together with incorrect and correct translations.
 
@@ -534,6 +535,8 @@ A \textsf{RegVal} represents the value of a register in the model returned by th
 
 \subsubsection{Translation}
 
+Figure \ref{smtlib} shows an example of how a program trace can be converted into a logical formula understood by the solver. In this case, the program has a single conditional branch, leading to one path condition. Presumably, we have already explored (perhaps from the initial run with random inputs) what happens when the branch is taken (that is $\$4 = \$5$ and so we skip the last addition). Now we are interested in exploring the case where the branch is not taken: for that, we need the path condition $\$4 \neq \$5$ at the end of the trace.
+
 \begin{figure}
 \begin{multicols}{3}
 program:
@@ -554,15 +557,14 @@ trace:
 \begin{lstlisting}
   add $3, $1, $2
   slt $4, $1, $2
-  lis $5
-  1
-  $4 == $5
+  add $5, $1, $0
+  $4 != $5
 \end{lstlisting}
 
 \vfill\null
 \columnbreak
 
-formula:
+SMT-LIB:
 \begin{lstlisting}[language=Lisp]
 (declare-const r1 (_ BitVec 32))
 (declare-const r2 (_ BitVec 32))
@@ -582,9 +584,25 @@ formula:
 (get-model)
 \end{lstlisting}
 \end{multicols}
-\caption{A sample program, a trace in it, and the trace's representation as a logical formula}
+\caption{A sample program, a trace in it, and the trace's representation in SMT-LIB notation}
+\label{smtlib}
 \end{figure}
 
+The third column in Figure \ref{smtlib} shows the logical formula that is produced by the \textsf{Query} module. The formula is satisfiable iff the path condition $\$4 \neq \$5$ can evaluate to true for certain values of $\$1$ and $\$2$. In Figure \ref{smtlib}, we have used the SMT-LIB \cite{barrett2010smt} representation of the query, which is a textual representation with a Lisp-like syntax. Tamarin uses Z3's Java API, for efficiency.
+
+Every register in the trace has a corresponding ``constant'' in the formula ($r_1 \ldots r_6$). The constants have type ``32-bit bitvector'', to encode that registers are 32-bit integers. Consequently, arithmetic operations on registers are encoded as operations on bitvectors (e.g. \textsf{bvadd, bvslt}).
+
+Some instructions like \lstinline{slt} have domain-specific semantics, so their translations are slightly more complicated: \lstinline{slt} specifically uses SMT-LIB's \textsf{ite} (if-then-else) construct.
+
+There is no mutation in the formula, but that is ok because of our conversion to SSA from Section \ref{ssaconv}. Instead of mutation, relationships between constants are encoded using assertions. In general, we have one assertion per instruction in the trace.
+
+Once all constant declarations and assertions have been specified, we can query Z3 to check the satisfiability of the formula via \textsf{(check-sat)}. If the formula is satisfiable, we can also request the satisfying model that Z3 found, with \textsf{get-model}. In this case, Z3 returns 
+
+\begin{lstlisting}[language=Lisp]
+(model (define-fun r1 () (_ BitVec 32) #x80000000)
+       (define-fun r2 () (_ BitVec 32) #x80000000)
+           ...)
+\end{lstlisting}
 
 \subsubsection{Memory Representation}
 
@@ -596,7 +614,22 @@ Alternation. Compatibility. Soundness/Completeness. Efficiency.
 \section{Evaluation}
 
 \section{Related Work}
+We now survey some of the existing literature on program equivalence that is relevant to the project. In general, many tools have been built for checking program equivalence, differing on the language they target (high level vs assembly), their level of generality (one-off tools vs frameworks or even intermediate languages that serve as the backend for multiple tools), the language features they support (loops vs loop unrolling) and their soundness and completeness guarantees (concolic testing based tools vs complete exploration of a bounded search space).
 
+\begin{itemize}
+\item \cite{hawblitzel2013will} is probably the most relevant reference. They verify compiler correctness by checking program equivalence of emitted assembly code. They use x86, Boogie, and SymDiff, much in the same way we would like to do for this project.
+\item \cite{lahiri2012symdiff} is also very relevant. They built SymDiff, a tool built on top of Boogie to test for program equivalence. It is unclear if we will be able to use it, though, since the released repository seems somewhat abandoned.
+\item \cite{barnett2005boogie} present Boogie, an intermediate verification language that can be targeted as an IR for program verification tasks.
+\item \cite{ramos2011practical} present UC-KLEE, which given two C functions checks whether they are equivalent (up to a fixed input size of 8 bytes). Their notion of equivalence considers not only function return values, but also memory locations reachable from them. UC-KLEE is built on top of KLEE. As far as we can tell, UC-KLEE was never released publicly.
+\item \cite{cadar2008klee} is another popular ``backend'' for program verification tasks. It implements a symbolic VM for LLVM bitcode.
+\item \cite{egele2014blanket} use \emph{Blanket Execution} to identify portions of program binaries that are ``'similar', based on randomized testing and having similar side-effects.
+\item \cite{partush2013abstract} use abstract interpretation to prove program equivalence for numerical programs.
+\item \cite{yang2014property} show how verify that manually-annotated program properties continue to hold as a program evolves.
+\item \cite{necula2000translation} verifies equivalence of IRs before and after compiler passes.
+\item \cite{francesco2014grease} present GreASE, which focuses on non-equivalence checking.
+\item \cite{sharma2013data} are able to check equivalence of x86 loops, unlike most of the other tools, which need to unroll loops.
+\item \cite{person2011directed} combine static analysis and symbolic execution for program equivalence.
+\end{itemize}
 \section{Conclusions}
 
 \bibliographystyle{plain}
