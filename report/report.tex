@@ -461,9 +461,30 @@ A couple of points of interest:
 
 \subsubsection{Simplification}
 
+The simplification phase removes trivial path conditions, like \lstinline{beq 0, 0, foolabel}, which might be common (the specific \lstinline{beq} example is a common idiom for jumping to a loop header) but do not need to be considered by the SMT solver.
+
 \subsubsection{Trimming}
 
-\subsubsection{SSA conversion}
+The trimming phase just shortens the trace so that it contains at most \textsf{depth} (an argument to \textsf{transform}) path conditions. This is so we can do a bounded DFS (again, see Section \ref{redux}) to limit the search space.
+
+\subsubsection{SSA Conversion}
+
+The SSA phase converts traces into static single assignment (SSA) form \cite{cytron1991efficiently}. SSA form is crucial to be able to transform a trace into the corresponding logical formula. Consider the example in Figure \ref{ssa}, which shows a small trace together with incorrect and correct translations.
+
+The incorrect translation represents assignment through equality. This is intuitive, but misguided, because assignment mutates state, but equality does not. For example, suppose we append to our trace the path condition $\$3 = 9 \land \$1 = 3$. This gets translated to the equality $z = 9 \land x = 3$. But the equalities in the incorrect translation imply that $y = 0$ (because $x = x - y$) and so $z = x = y$. The path condition is then declared as unsatisfiable, but this is clearly wrong, because $\$1 = 6 \land \$2 = 3$ is a solution. 
+
+What went wrong, and how do we fix it? As we pointed, assignment mutates the value of registers, so we need to somehow encode that the ``$\$1$'' in the last $Add$ instruction is ``not the same'' as the one in the first $Add$. This behaviour is precisely captured by SSA form, where each variable is assigned to exactly once. This means that two reads of the same register that are separated by a write to the same register will be encoded as different variables. The correct translation in Figure \ref{ssa} uses subscripts to refer to the ``versions'' of each variable after writes. If we add the same path condition as before, we can see that it gets translated as $z_1 = 9 \land x_2 = 3$, which is now satisfiable because $x_2 = x_1 - y_1$ does not imply that $x_1 = y_1$.
+
+\begin{figure}
+\begin{tabular}{l | l | l}
+\textbf{Trace} & \textbf{Incorrect} & \textbf{Correct} \\
+$Add(\$3, \$1, \$2)$ & $z = x + y$ & $z_1 = x_1 + y_1$ \\
+$Sub(\$1, \$1, \$2)$ & $x = x - y$ & $x_2 = x_1 - y_1$ \\
+$Add(\$2, \$1, \$2)$ & $y = x + y$ & $y_2 = x_2 + y_1$\\
+\end{tabular}
+\caption{A trace together with an incorrect translation to a logical formula and a correct translation using SSA form}
+\label{ssa}
+\end{figure}
 
 \subsection{Queries}
 
