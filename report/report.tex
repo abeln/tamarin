@@ -604,6 +604,8 @@ Once all constant declarations and assertions have been specified, we can query 
            ...)
 \end{lstlisting}
 
+Which indeed is a solution (albeit not one a human would have picked), because it makes \lstinline{slt $4, $1, $2} assign $0$ to $\$4$, which skips the branch.
+
 \subsubsection{Memory Representation}
 
 \subsection{Concolic Execution Redux}
