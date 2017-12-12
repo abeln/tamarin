@@ -501,8 +501,7 @@ The algorithms for efficiently converting code into SSA form are sophisticated \
       \State $last(d) \gets d_{i + 1}$
       \State $instr' \gets Add(d_{i + 1}, s', t')$
       \State \textsf{append}$(trace', instr')$
-    \Else
-       \State $\ldots$ \Comment{Other cases}
+    \Else $\text{ } \ldots$ \Comment{Other cases}
     \EndIf
   \EndFor
   \State \Return $trace'$
