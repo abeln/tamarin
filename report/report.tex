@@ -521,7 +521,22 @@ The API for the module is the function
 def solve(trace: Trace): Option[Soln]
 \end{lstlisting}
 
-Memory, jumps, arithmetic operators.
+The input to \textsf{solve} is a trace that has been processed by \textsf{Trace}, likely containing a recently-negated path condition (negated by the \textsf{Concolic} module from Section \ref{redux}). \textsf{solve}'s task is to convert the trace into an equivalent logical formula, hand it to \textsf{Z3}, and then return the solution found by the solver.
+
+A \textsf{Soln} is just a \lstinline{Seq[RegVal]} (\textsf{solve} returns an \textsf{Option[Soln] in case the formula is unsatisfiable}), and a \textsf{RegVal} is an algebraic datatype of the form
+
+\begin{lstlisting}[language=scala]
+case object Unbound extends RegVal
+case class Fixed(v: Long) extends RegVal
+\end{lstlisting}
+
+A \textsf{RegVal} represents the value of a register in the model returned by the solver. \textsf{Unbound} represents the case when the solver does not constrain a register in its solution. By contrast, \textsf{Fixed} is used when the solver requires a specific value.
+
+\subsubsection{Translation}
+
+%
+
+\subsubsection{Memory Representation}
 
 \subsection{Concolic Execution Redux}
 \label{redux}
