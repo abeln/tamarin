@@ -1,4 +1,6 @@
-The code in this package was written by Ondrej Lhotak (olhotak@uwaterloo.ca) for
+The code in this package was (mostly) written by Ondrej Lhotak (olhotak@uwaterloo.ca) for
 CS 241E, at the University of Waterloo.
 
 It's used here with permission from the author.
+
+The CPU module was modified to record symbolic traces, in addition to running MIPS programs.

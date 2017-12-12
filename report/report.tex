@@ -486,7 +486,7 @@ $Add(\$2, \$1, \$2)$ & $y = x + y$ & $y_2 = x_2 + y_1$\\
 \label{ssa}
 \end{figure}
 
-The algorithms for efficiently converting code into SSA form are sophisticated \cite{cytron1991efficiently}, requiring the calculation of so-called dominator and $\phi$-functions. However, we are only interested in converting traces, which do not contain any jumps. In this case, a simple linear time pass over the trace suffices for converting to SSA. The algorithm is shown in Figure \ref{ssaalgo}.
+The algorithms for efficiently converting code into SSA form are sophisticated \cite{cytron1991efficiently}, requiring the calculation of so-called dominators and $\phi$-functions. However, we are only interested in converting traces, which do not contain any jumps. In this case, a simple linear-time pass over the trace suffices for converting to SSA. The algorithm is shown in Figure \ref{ssaalgo}.
 
 \begin{figure}
 \begin{algorithmic}
@@ -512,6 +512,14 @@ The algorithms for efficiently converting code into SSA form are sophisticated \
 \end{figure}
 
 \subsection{Queries}
+
+The \textsf{Query} module is responsible for interfacing with the \textsf{Z3} solver to determine the satisfiability of path constraints, leading to unexplored program paths.
+
+The API for the module is the function
+
+\begin{lstlisting}[language=scala]
+def solve(trace: Trace): Option[Soln]
+\end{lstlisting}
 
 Memory, jumps, arithmetic operators.
 
