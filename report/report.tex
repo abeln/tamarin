@@ -486,6 +486,32 @@ $Add(\$2, \$1, \$2)$ & $y = x + y$ & $y_2 = x_2 + y_1$\\
 \label{ssa}
 \end{figure}
 
+The algorithms for efficiently converting code into SSA form are sophisticated \cite{cytron1991efficiently}, requiring the calculation of so-called dominator and $\phi$-functions. However, we are only interested in converting traces, which do not contain any jumps. In this case, a simple linear time pass over the trace suffices for converting to SSA. The algorithm is shown in Figure \ref{ssaalgo}.
+
+\begin{figure}
+\begin{algorithmic}
+\Function{ssaConvert}{$trace$}
+  \State $trace' \gets \emptyset$
+  \State $\forall x. last(x) \gets x_1$  
+  \ForAll{$instr \in trace$}
+    \If{$instr = Add(d, s, t)$}
+      \State $s' \gets last(s)$
+      \State $t' \gets last(t)$
+      \State $d_i \gets last(d)$
+      \State $last(d) \gets d_{i + 1}$
+      \State $instr' \gets Add(d_{i + 1}, s', t')$
+      \State \textsf{append}$(trace', instr')$
+    \Else
+       \State $\ldots$ \Comment{Other cases}
+    \EndIf
+  \EndFor
+  \State \Return $trace'$
+\EndFunction
+\end{algorithmic}
+\caption{SSA conversion of traces}
+\label{ssaalgo}
+\end{figure}
+
 \subsection{Queries}
 
 Memory, jumps, arithmetic operators.
