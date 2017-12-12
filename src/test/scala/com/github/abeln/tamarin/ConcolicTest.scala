@@ -228,8 +228,42 @@ class ConcolicTest extends FlatSpec {
       Define(end),
       JR(Reg.savedPC)
     )
-    
+
     assertNotEquiv(correct, incorrect)
+  }
+
+  it should "correctly reason about 'slt' (and nested conditions)" in {
+    val skipBad = new Label("skipBad")
+
+    val prog1 = Seq[Code](
+      ADD(Reg.result, Reg.input1, Reg.input2),
+      const(Reg(6), 100),
+      SLT(Reg.scratch, Reg.input2, Reg(6)),
+      bne(Reg.scratch, Reg.zero, skipBad),
+      const(Reg(6), 100),
+      SLT(Reg.scratch, Reg.input1, Reg(6)),
+      bne(Reg.scratch, Reg.zero, skipBad),
+      const(Reg(6), 400),
+      SLT(Reg.scratch, Reg.result, Reg(6)),
+      bne(Reg.scratch, Reg.zero, skipBad),
+      const(Reg(6), 300),
+      SLT(Reg.scratch, Reg.input1, Reg(6)),
+      beq(Reg.scratch, Reg.zero, skipBad),
+      const(Reg(6), 500),
+      SLT(Reg.scratch, Reg.input2, Reg(6)),
+      beq(Reg.scratch, Reg.zero, skipBad),
+      ADD(Reg.result, Reg.result, Reg.input1),
+      ADD(Reg.result, Reg.result, Reg.input2),
+      Define(skipBad),
+      JR(Reg.savedPC)
+    )
+
+    val prog2 = Seq[Code](
+      ADD(Reg.result, Reg.input1, Reg.input2),
+      JR(Reg.savedPC)
+    )
+
+    assertNotEquiv(prog1, prog2)
   }
 
   val setUpStack: Code = block(

@@ -36,9 +36,6 @@ object SymInstr {
   type Trace = Seq[Instr]
   def trace(is: Instr*): Trace = Seq(is: _*)
 
-  /** Marker trait for path conditions */
-  sealed trait PathCond
-
   /** Symbolic instructions */
   sealed trait Instr
   case class Add(d: Reg, s: Operand, t: Operand) extends Instr
@@ -77,6 +74,8 @@ object SymInstr {
 
   def assign(d: Reg, s: Operand) = Add(d, s, Lit(0))
 
+  /** Marker trait for path conditions */
+  sealed trait PathCond
   // Path conditions
   case class EqCond(s: Operand, t: Operand) extends Instr with PathCond
   case class NeqCond(s: Operand, t: Operand) extends Instr with PathCond

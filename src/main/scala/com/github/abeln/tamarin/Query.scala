@@ -142,6 +142,7 @@ object Query {
         case _ if r == stackPointer => CPU.numMaxAddr
         case _ => 0
       }
+
       ctx.mkEq(b32(r), b32(Lit(initVal)))
     }).toSeq
 

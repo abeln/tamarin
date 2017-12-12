@@ -252,9 +252,23 @@ object Concolic {
 
   /** Verifies that a new trace matches a reference one, converting the new one to a `StTrace` in the process. */
   private def adaptTrace(refTrace: StTrace, actualTrace: Trace): Option[StTrace] = {
-    def filterPC(tr: Trace): Trace = tr.filter(isPC)
-    val refPC = filterPC(stripFlipped(refTrace))
-    val actualPC = filterPC(actualTrace)
+    // TODO: instead of using the signature, also compare the registers in each comparison.
+    // For that, we need to either remove the mutation in `freshRegister`, or keep more
+    // info so we can un-SSA a transformed trace.
+    /**
+      * Calculates the `signature` of a trace, which is the sequence `sign` such that:
+      *   - sign(i) is true if the ith path condition in the trace is an [[EqCond]]
+      *   - sign(i) is false if the ith path condition is a [[NeqCond]]
+      **/
+    def sign(tr: Trace): Seq[Boolean] = {
+      (tr filter isPC) map {
+        case eq: EqCond => true
+        case neq: NeqCond => false
+      }
+    }
+
+    val refPC = sign(stripFlipped(refTrace))
+    val actualPC = sign(actualTrace)
 
     if (actualPC.startsWith(refPC) || refPC.startsWith(actualPC)) {
       val (flippedMap, _) = ((Map.empty[Int, Boolean], 0) /: refTrace) {
