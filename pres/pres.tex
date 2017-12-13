@@ -164,7 +164,47 @@ Try some inputs by hand: low coverage, fast (unit tests)
 Try all $2^{64}$values of $\$1$ and $\$2$: high coverage, slow (but decidable)
 \pause
 \\~\\
-\textbf{Tamarin}: use concolic testing to check if the programs are disequivalent
+\textbf{Tamarin}: use concolic execution: higher coverage(?), not too slow(?)
 \end{frame}
+
+\begin{frame}[fragile]{Idea}
+
+Alternating concolic execution
+
+\begin{multicols}{2}
+\begin{lstlisting}[escapeinside={(*}{*)}]
+# P_1
+  bne $1, 42, end
+  add $3, $3, $0
+end:
+  add $3, $1, $2
+\end{lstlisting}
+\vfill\null
+\columnbreak
+\begin{lstlisting}
+# P_2
+  add $3, $1, $2  
+  bne $2, 100, end
+  add $3, $3, $2
+end:
+\end{lstlisting}
+\end{multicols}
+
+\pause
+
+\begin{tabular}{l | l | l | l | l | l | l | l}
+Run & Driver & Verifier & $\$1$ & $\$2$ & Path & $R_D$ & $R_V$ \\
+\hline
+\pause
+1 & $P_1$ & $P_2$ & 1 & 1 & $\$1 \neq 42$ & 2 & 2 \\
+\pause
+2 & $P_2$ & $P_1$ & 1 & 1 & $\$2 \neq 100$ & 2 & 2\\
+\pause
+3 & $P_1$ & $P_2$ & 42 & 1 & $\$1 = 42$ & 2 & 2 \\
+\pause
+4 & $P_2$ & $P_1$ & 1 & 100 & $\$2 = 100$ & \textcolor{red}{201} & \textcolor{red}{2}
+\end{tabular}
+\end{frame}
+
 
 \end{document}

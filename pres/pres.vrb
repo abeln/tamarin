@@ -1,25 +1,37 @@
-\frametitle{The Problem}
-Attempt 2: two programs are $S$-equivalent if they cannot be told apart after $S$ steps.
-\pause
-\\~\\
-$S$-equivalent (e.g. for $S = 10$), but not equivalent:
+\frametitle{Idea}
+
+Alternating concolic execution
+
 \begin{multicols}{2}
 \begin{lstlisting}[escapeinside={(*}{*)}]
 # P_1
-add $3, $1, $2
+  bne $1, 42, end
+  add $3, $3, $0
+end:
+  add $3, $1, $2
 \end{lstlisting}
 \vfill\null
 \columnbreak
 \begin{lstlisting}
 # P_2
-  add $4, $0, 1  # counter
-  add $5, $0, 42 # upper bound
-loop:
-  slt $6, $4, $5
-  beq $6, $0, end
-  add $4, $4, 1
-  beq $0, $0, loop
+  add $3, $1, $2
+  bne $2, 100, end
+  add $3, $3, $2
 end:
-  add $3, $1, $1
 \end{lstlisting}
 \end{multicols}
+
+\pause
+
+\begin{tabular}{l | l | l | l | l | l | l | l}
+Run & Driver & Verifier & $\$1$ & $\$2$ & Path & $R_D$ & $R_V$ \\
+\hline
+\pause
+1 & $P_1$ & $P_2$ & 1 & 1 & $\$1 \neq 42$ & 2 & 2 \\
+\pause
+2 & $P_2$ & $P_1$ & 1 & 1 & $\$2 \neq 100$ & 2 & 2\\
+\pause
+3 & $P_1$ & $P_2$ & 42 & 1 & $\$1 = 42$ & 2 & 2 \\
+\pause
+4 & $P_2$ & $P_1$ & 1 & 100 & $\$2 = 100$ & \textcolor{red}{201} & \textcolor{red}{2}
+\end{tabular}
