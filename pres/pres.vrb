@@ -10,29 +10,34 @@
 \begin{tikzpicture}[node distance = 1.5cm, auto]
     % Place nodes
     \node [mainblock] (concolic) {Concolic};
+    \pause
     \node [block, left of=concolic, node distance=5cm] (cpu) {CPU};
+    \pause
+    \draw [line] (concolic) -- (cpu) node [midway, fill=white] {program};
+    \pause
+    \draw  (cpu)  edge [-latex, dashed, bend left=20] node[midway] {trace} (concolic);
+    \pause
+
     \node [block, above of=concolic, right of=concolic, node distance=2cm] (trace) {Trace};
-    \node [block, below of=trace, right of=trace, node distance=2.5cm] (query) {Query};
+    \pause
+    \draw [line] (concolic) -- (trace) node [midway]{trace};
+    \pause
+
+    \node [block, below of=trace, right of=trace, node distance=2.2cm] (query) {Query};
+    \pause
+    \draw [line] (trace) -- (query) node [midway]{modified trace};
+    \pause
+
     \node [block, fill=red!20, below of=query, left of=query, node distance=3cm] (z3) {Z3};
+    \pause
+    \draw [line] (query) -- (z3) node [midway]{formula};
+    \pause
+    \draw [-latex, dashed] (z3) edge [-latex, dashed, bend left=20] node[midway]{model} (query);
+    \pause
+    \draw [-latex, dashed] (query) -- (concolic) node [midway]{new path};
+
+    \pause
     \node [draw=black, dashed, fit= (concolic) (cpu) (trace) (query)] {};
     \node at (-5.3, 3) {Tamarin};
 
-%    % Draw edges
-    \draw [line] (concolic) -- (cpu) node [midway, fill=white] {program};
-%    \draw [-latex, bend left, dashed] (cpu) edge (concolic);
-    \draw  (cpu)  edge [-latex, dashed, bend left=20] node[midway] {trace} (concolic);
-    \draw [line] (concolic) -- (trace) node [midway]{trace};
-    \draw [line] (trace) -- (query) node [midway]{modified trace};
-    \draw [-latex, dashed] (query) -- (concolic) node [midway]{new path};
-    \draw [line] (query) -- (z3) node [midway]{formula};
-    \draw [-latex, dashed] (z3) edge [-latex, dashed, bend left=20] node[midway]{model} (query);
-%    \path [line] (init) -- (identify);
-%    \path [line] (identify) -- (evaluate);
-%    \path [line] (evaluate) -- (decide);
-%    \path [line] (decide) -| node [near start] {yes} (update);
-%    \path [line] (update) |- (identify);
-%    \path [line] (decide) -- node {no}(stop);
-%    \path [line,dashed] (expert) -- (init);
-%    \path [line,dashed] (system) -- (init);
-%    \path [line,dashed] (system) |- (evaluate);
 \end{tikzpicture}
