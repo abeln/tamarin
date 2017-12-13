@@ -1,29 +1,35 @@
-\frametitle{Query}
+\frametitle{Tamarin (Recap)}
 \normalsize
-trace:
-\begin{lstlisting}
-  add $3, $1, $2
-  slt $4, $1, $2
-  add $5, $1, $0
-  $4 != $5
-\end{lstlisting}
+% Taken from http://www.texample.net/tikz/examples/simple-flow-chart/
+% Define block styles
+%\tikzstyle{decision} = [diamond, draw, fill=blue!20,
+%    text width=4.5em, text badly centered, node distance=3cm, inner sep=0pt]
+\tikzstyle{block} = [rectangle, draw, fill=blue!20,
+    text width=3em, text centered, rounded corners, minimum height=2em]
+    \tikzstyle{mainblock} = [rectangle, draw, fill=green!20,
+    text width=3.3em, text centered, rounded corners, minimum height=2em]
+\tikzstyle{line} = [draw, -latex']
+%\tikzstyle{cloud} = [draw, ellipse,fill=red!20, node distance=3cm,
+%    minimum height=2em]
 
-\pause
-~\\
+\begin{tikzpicture}[node distance = 1.5cm, auto]
+    % Place nodes
+    \node [mainblock] (concolic) {Concolic};
+    \node [block, left of=concolic, node distance=5cm] (cpu) {CPU};
+    \draw [line] (concolic) -- (cpu) node [midway, fill=white] {program};
+    \draw  (cpu)  edge [-latex, dashed, bend left=20] node[midway] {trace} (concolic);
 
-formula (SMT-LIB):
-\begin{lstlisting}[language=Lisp, escapeinside=||]
-(declare-const r0 (_ BitVec 32))
-(declare-const r1 (_ BitVec 32))
-... |\pause|
-(assert (= r0 (_ bv0 32))) |\pause|
-(assert (= r3 (bvadd r1 r2))) |\pause|
-(assert
-  (= r4 (ite (bvslt r1 r2)
-    (_ bv1 32)
-    (_ bv0 32)))) |\pause|
-(assert (= r5 (_ bv1 32))) |\pause|
-(assert (not (= r4 r5))) |\pause|
+    \node [block, above of=concolic, right of=concolic, node distance=2cm] (trace) {Trace};
+    \draw [line] (concolic) -- (trace) node [midway]{trace};
 
-(check-sat) (get-model)
-\end{lstlisting}
+    \node [block, below of=trace, right of=trace, node distance=2.2cm] (query) {Query};
+    \draw [line] (trace) -- (query) node [midway]{modified trace};
+
+    \node [block, fill=red!20, below of=query, left of=query, node distance=3cm] (z3) {Z3};
+    \draw [line] (query) -- (z3) node [midway]{formula};
+    \draw [-latex, dashed] (z3) edge [-latex, dashed, bend left=20] node[midway]{model} (query);
+    \draw [-latex, dashed] (query) -- (concolic) node [midway]{new path};
+
+    \node [draw=black, dashed, fit= (concolic) (cpu) (trace) (query)] {};
+    \node at (-5.3, 3) {Tamarin};
+\end{tikzpicture}

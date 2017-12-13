@@ -239,6 +239,7 @@ Run & Driver & Verifier & $\$1$ & $\$2$ & Path & $R_D$ & $R_V$ \\
 \end{frame}
 
 \begin{frame}[fragile]{Tamarin (Overview)}
+\normalsize
 % Taken from http://www.texample.net/tikz/examples/simple-flow-chart/
 % Define block styles
 %\tikzstyle{decision} = [diamond, draw, fill=blue!20, 
@@ -443,6 +444,57 @@ formula (SMT-LIB):
 
 (check-sat) (get-model)
 \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Tamarin (Recap)}
+\normalsize
+% Taken from http://www.texample.net/tikz/examples/simple-flow-chart/
+% Define block styles
+%\tikzstyle{decision} = [diamond, draw, fill=blue!20, 
+%    text width=4.5em, text badly centered, node distance=3cm, inner sep=0pt]
+\tikzstyle{block} = [rectangle, draw, fill=blue!20, 
+    text width=3em, text centered, rounded corners, minimum height=2em]
+    \tikzstyle{mainblock} = [rectangle, draw, fill=green!20, 
+    text width=3.3em, text centered, rounded corners, minimum height=2em]
+\tikzstyle{line} = [draw, -latex']
+%\tikzstyle{cloud} = [draw, ellipse,fill=red!20, node distance=3cm,
+%    minimum height=2em]
+    
+\begin{tikzpicture}[node distance = 1.5cm, auto]
+    % Place nodes
+    \node [mainblock] (concolic) {Concolic};
+    \node [block, left of=concolic, node distance=5cm] (cpu) {CPU};
+    \draw [line] (concolic) -- (cpu) node [midway, fill=white] {program};
+    \draw  (cpu)  edge [-latex, dashed, bend left=20] node[midway] {trace} (concolic);
+    
+    \node [block, above of=concolic, right of=concolic, node distance=2cm] (trace) {Trace};
+    \draw [line] (concolic) -- (trace) node [midway]{trace};
+    
+    \node [block, below of=trace, right of=trace, node distance=2.2cm] (query) {Query};
+    \draw [line] (trace) -- (query) node [midway]{modified trace};
+     
+    \node [block, fill=red!20, below of=query, left of=query, node distance=3cm] (z3) {Z3};
+    \draw [line] (query) -- (z3) node [midway]{formula};
+    \draw [-latex, dashed] (z3) edge [-latex, dashed, bend left=20] node[midway]{model} (query);
+    \draw [-latex, dashed] (query) -- (concolic) node [midway]{new path};
+
+    \node [draw=black, dashed, fit= (concolic) (cpu) (trace) (query)] {};
+    \node at (-5.3, 3) {Tamarin};
+\end{tikzpicture}
+\end{frame}
+
+\begin{frame}
+Demo time
+\end{frame}
+
+\begin{frame}{Conclusions}
+Program equivalence is tricky. Program equivalence for assembly programs is even trickier. \\~\\
+\pause
+Alternating concolic execution might be an effective way to tackle the problemb (surprinsingly, not done before?). \\~\\
+\pause
+Need experiments and to eliminate restrictions before we can say if useful for real-world programs. \\~\\
+\pause
+The whole field is not just theory. Z3 actually works! (and it's not hard to integrate with) \\
 \end{frame}
 
 \end{document}
