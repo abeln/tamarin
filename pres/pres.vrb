@@ -1,24 +1,20 @@
-\frametitle{CPU}
-\begin{tikzpicture}[node distance = 1.5cm, auto]
-\node [draw] (fetch) {Fetch};
+\frametitle{Trace}
+Desugar
 \pause
-\node [draw, below of=fetch, right of=fetch] (decode) {Decode};
-\draw [-latex] (fetch) -- (decode) node [midway] {word$_n$};
-
+\\
+\lstinline{Mult(s, t)} $\rightarrow$ \lstinline{Mult64(tmp, s, t); Low32(lo, tmp); High32(hi, tmp)}
 \pause
-\node [draw, below of=decode, left of=decode] (execute) {Execute};
-\draw [-latex] (decode) -- (execute) node [midway] {instr$_n$};
-
+\\~\\
+Simplify
 \pause
-\draw [-latex, bend left=50] (execute) edge (fetch);
-
+\\
+\lstinline{beq $0, $0, label} $\rightarrow \emptyset$
 \pause
-\node [draw, right=2cm of decode] (symb) {MakeSymbolic};
-\node [draw, right=2cm of symb, minimum height=3cm, text width=1.15cm] (trace) {};
-\node [below right, text width=1cm] at (trace.north west) {Trace symb$_1$ symb$_2$ $\ldots$ symb$_{n - 1}$ \textcolor{blue}{symb$_n$}};
+\\~\\
+Trim
+\\
 \pause
-
-\draw [-latex] (decode) -- (symb) node [midway] {instr$_n$};
+limit trace to $D$ path conditions
+\\~\\
 \pause
-\draw [-latex] (symb) -- (trace) node [midway] {symb$_n$};
-\end{tikzpicture}
+SSA convert

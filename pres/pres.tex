@@ -7,7 +7,6 @@
 \usepackage{listings}
 \usepackage{mips}
 \usepackage{amsmath}
-\usepackage{cancel}
 \usepackage{tikz}
 \usepackage{url}
 \usetikzlibrary{shapes,backgrounds,arrows, fit, positioning}
@@ -217,9 +216,9 @@ Run & Driver & Verifier & $\$1$ & $\$2$ & Path & $R_D$ & $R_V$ \\
 \end{tabular}
 \end{frame}
 
+\begin{frame}{Tamarin (Overview)}
 \normalsize
 
-\begin{frame}{Tamarin (Overview)}
 \begin{tikzpicture}[remember picture,overlay]
 
 \node [draw] at (5,0) (tam) {Tamarin};
@@ -288,9 +287,9 @@ Run & Driver & Verifier & $\$1$ & $\$2$ & Path & $R_D$ & $R_V$ \\
 \end{tikzpicture}
 \end{frame}
 
+\begin{frame}[fragile]{CPU}
 \normalsize
 
-\begin{frame}[fragile]{CPU}
 \begin{tikzpicture}[node distance = 1.5cm, auto]
 \node [draw] (fetch) {Fetch};
 \pause
@@ -317,6 +316,7 @@ Run & Driver & Verifier & $\$1$ & $\$2$ & Path & $R_D$ & $R_V$ \\
 \end{frame}
 
 \begin{frame}{CPU (MakeSymbolic)}
+
 \begin{tabular}{l | l}
 Instruction & Symbolic \\
 \hline
@@ -327,9 +327,80 @@ Instruction & Symbolic \\
 \lstinline{add $3, $pc, $0} & $r_3 \gets \textsf{0x8BADF00D}$ \\
 \lstinline{lis $3; 42} & $$ $r_3 \gets 42$
 \end{tabular}
-\end{frame}{CPU}
+\end{frame}
 
 \begin{frame}{Trace}
+\begin{tikzpicture}[remember picture,overlay]
+\node [draw] at (5,0) (trace) {Trace};
+\node at (2, 0) (t) {$T$};
+\node at (8, 0) (tp) {$T'$};
+
+\draw [-latex] (t) -- (trace);
+\draw [-latex] (trace) -- (tp);
+\end{tikzpicture}
+
+\pause
+~\\
+{\tt Seq[Trace => Trace]}
+\pause
+\begin{itemize}
+\item Desugar
+\pause
+\item Simplify
+\pause
+\item Trim
+\pause
+\item SSA convert
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Trace}
+Desugar
+\pause
+\\
+\lstinline{Mult(s, t)} $\rightarrow$ \lstinline{Mult64(tmp, s, t); Low32(lo, tmp); High32(hi, tmp)}
+\pause
+\\~\\
+Simplify
+\pause
+\\
+\lstinline{beq $0, $0, label} $\rightarrow \emptyset$ 
+\pause
+\\~\\
+Trim
+\\
+\pause
+limit trace to $D$ path conditions
+\\~\\
+\pause
+SSA convert
+\end{frame}
+
+\begin{frame}{Trace (SSA convert)}
+
+\begin{tabular}[fragile]{l | l | l}
+Trace & Incorrect & Correct \\
+\hline
+\pause
+\lstinline{Add(\$3, \$1, \$2)} & \pause $z = x + y$ & \pause $z_1 = x_1 + y_1$ \\
+\pause
+\lstinline{Sub(\$1, \$1, \$2)} & \pause $x = x - y$ & \pause $x_2 = x_1 - y_1$ \\
+\pause
+\lstinline{Add(\$2, \$1, \$2)} & \pause $y = x + y$ & \pause $y_2 = x_2 + y_1$
+\end{tabular}
+\pause
+\\~\\`\\
+$\$3 = 9 \land \$1 = 3$
+\pause
+\\
+$z = 9 \land x = 3$
+\pause
+(no sol)
+\\
+\pause
+$z_1 = 9 \land x_2 = 3$
+\pause
+$(x_1 = 6 \land y_1 = 3)$
 \end{frame}
 
 \end{document}
