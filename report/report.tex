@@ -587,6 +587,7 @@ SMT-LIB:
 (declare-const r4 (_ BitVec 32))
 (declare-const r5 (_ BitVec 32))
 
+(assert (= r0 (_ bv0 32)))
 (assert (= r3 (bvadd r1 r2)))
 (assert
   (= r4 (ite (bvslt r1 r2)
