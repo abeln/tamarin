@@ -432,6 +432,7 @@ formula (SMT-LIB):
 (declare-const r0 (_ BitVec 32))
 (declare-const r1 (_ BitVec 32))
 ... |\pause|
+(assert (= r0 (_ bv0 32))) |\pause|
 (assert (= r3 (bvadd r1 r2))) |\pause|
 (assert
   (= r4 (ite (bvslt r1 r2)
@@ -440,8 +441,7 @@ formula (SMT-LIB):
 (assert (= r5 (_ bv1 32))) |\pause|
 (assert (not (= r4 r5))) |\pause|
 
-(check-sat)
-(get-model)
+(check-sat) (get-model)
 \end{lstlisting}
 \end{frame}
 
