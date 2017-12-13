@@ -72,6 +72,7 @@ The boxes are assembly programs. The animals are the functions those programs co
 Program equivalence. The program is the specification. The complications of assembly language.
 
 \section{Program Equivalence for MIPS}
+\label{progequiv}
 
 Let us set up the problem a bit more formally. Consider the set $P$ of MIPS-assembly programs that satisfy two restrictions: they take as inputs only the values of registers $\$1$ and $\$2$, and when they stop executing we define their output to be (exclusively) the value of $\$3$. Other side effects, such as printing values to the screen, or system calls, are disallowed.
 
@@ -423,6 +424,7 @@ Instead of the (precise) interpretation above, we use concretization to generate
 
 
 \subsection{Transformations}
+\label{transsection}
 
 The \textsf{Trace} module also exposes just a single function:
 
@@ -627,11 +629,19 @@ The main difference between Tamarin and a traditional concolic execution engine 
 
 \subsubsection{Bounded DFS}
 
+As in the original concolic testing tool, CUTE \cite{sen2005cute}, Tamarin explores program paths using a bounded depth-first search. To guarantee termination, Tamarin trims CPU traces so that they contain at most \textsf{depth} path conditions (later path conditions are simply ignored). The current depth is set at 50, but is configurable. 
+
 \subsubsection{Comparing Results}
+
+When are the results of the two programs consider contradictory? Only when both programs terminate with different values in $\$3$, or when one program fails while the other succeeds. In particular, non-termination is treated conservatively and no inferences are derived from it (this could be modified soundly if one of the two programs is given a ``priviledged'' status by considering it the specification). The full rules are those in Section \ref{progequiv}.
 
 \subsubsection{Soundness and Completeness}
 
+As we saw in Lemma \ref{soundness}, Tamarin is sound, but not complete. There are multiple sources of incompleteness: not all paths are explored (because of the \textsf{depth} parameter), termination is ensured via the \textsf{fuel}, and part of the program state is simply not tracked at all, leading to under-approximation.
+
 \subsubsection{Efficiency}
+
+We have not done an formal complexity analysis of the algorithm implemented by Tamarin. In any case, as with other concolic execution tools, there is a risk of combinatorial path explosion, which can be traded away in exchange for a loss in precision via the \textsf{depth} parameter. A similar tradeoff exists with the \textsf{fuel} parameter. The theories used by Tamarin via Z3 are bitvectors, arrays, and integer arithmetic including multiplication, which is potentially problematic. If further testing revealed an impact to performance, we would look into concretization strategies to handle the multiplication case.
 
 \section{Evaluation}
 
