@@ -1,0 +1,25 @@
+\frametitle{The Problem}
+Attempt 2: two programs are $S$-equivalent if they cannot be told apart after $S$ steps.
+\pause
+\\~\\
+$S$-equivalent (e.g. for $S = 10$), but not equivalent:
+\begin{multicols}{2}
+\begin{lstlisting}[escapeinside={(*}{*)}]
+# P_1
+add $3, $1, $2
+\end{lstlisting}
+\vfill\null
+\columnbreak
+\begin{lstlisting}
+# P_2
+  add $4, $0, 1  # counter
+  add $5, $0, 42 # upper bound
+loop:
+  slt $6, $4, $5
+  beq $6, $0, end
+  add $4, $4, 1
+  beq $0, $0, loop
+end:
+  add $3, $1, $1
+\end{lstlisting}
+\end{multicols}

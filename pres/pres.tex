@@ -1,8 +1,34 @@
 \documentclass[pdf]{beamer}
 \mode<presentation>{}
 
+\usepackage{multicol}
+\usepackage{graphicx}
 \usepackage{xcolor}
-\usepackage{tikz}   
+\usepackage{listings}
+\usepackage{mips}
+\usepackage{amsmath}
+\usepackage{cancel}
+\usepackage{tikz}
+\usepackage{url}
+\usetikzlibrary{shapes,backgrounds,arrows, fit, positioning}
+\usepackage{algpseudocode}
+
+
+\definecolor{CommentGreen}{rgb}{0,.6,0}
+\lstset{
+ language=[mips]Assembler,
+ escapechar=@, % include LaTeX code between `@' characters
+ keepspaces,   % needed to preserve spacing with lstinline
+ basicstyle=\footnotesize\ttfamily\bfseries,
+ commentstyle=\color{CommentGreen},
+ stringstyle=\color{cyan},
+ showstringspaces=false,
+ keywordstyle=[1]\color{blue},    % instructions
+ keywordstyle=[2]\color{magenta}, % directives
+ keywordstyle=[3]\color{red},     % registers
+ }
+ 
+\lstset{language=[mips]Assembler}
 
 %% preamble
 \title{Tamarin: Concolic Disequivalence for MIPS}
@@ -44,6 +70,101 @@ nom nom
 \fbox{\includegraphics[width=3cmcm]{camel}} \hspace{2cm} \fbox{\includegraphics[width=3cm]{beaver}}
 \\
 \hspace{5cm} {\Huge $\neq$}
+\end{frame}
+
+\Large
+
+\begin{frame}{The Problem}
+Given MIPS program $P_1$ and $P_2$, when are they equivalent?
+\end{frame}
+
+\begin{frame}{The Problem}
+Attempt 1: two programs are equivalent if they give the same output (resp.) for all inputs.
+\pause
+\\~\\
+\pause
+What's an input?
+\pause
+Register $\$1$ and $\$2$.
+\pause
+\\
+What's an output?
+\pause
+Register $\$3$. 
+\pause
+\\~\\
+Don't care about (most) CPU interrupts/IO.
+\end{frame}
+
+\begin{frame}{The Problem}
+Attempt 1: two programs are equivalent if they give the same output (resp.) for all inputs.
+\pause
+\\~\\
+Problem: undecidable via Rice's theorem.
+\end{frame}
+
+\begin{frame}[fragile]{The Problem}
+Attempt 2: two programs are $S$-equivalent if they cannot be told apart after $S$ steps.
+\pause
+\\~\\
+$S$-equivalent (e.g. for $S = 10$), but not equivalent:
+\begin{multicols}{2}
+\begin{lstlisting}[escapeinside={(*}{*)}]
+# P_1
+add $3, $1, $2
+\end{lstlisting}
+\vfill\null
+\columnbreak
+\begin{lstlisting}
+# P_2
+  add $4, $0, 1  # counter
+  add $5, $0, 42 # upper bound
+loop:
+  slt $6, $4, $5 
+  beq $6, $0, end
+  add $4, $4, 1
+  beq $0, $0, loop
+end:
+  add $3, $1, $1  
+\end{lstlisting}
+\end{multicols}
+\end{frame}
+
+\begin{frame}{The Problem}
+Attempt 2: two programs are $S$-equivalent if they \textbf{cannot be told apart} after $S$ steps.
+\vspace{1cm}
+
+\begin{tabular}{l | l | l}
+$R_1$ & $R_2$ & $S$-equiv \\
+\hline
+\pause
+$v$ & $v$ & yes \\
+\pause
+$v$ & $w \neq v$ & no \\
+\pause
+$v$ & error & no \\
+\pause
+error & error & yes \\
+\pause
+non-termination & ??? & yes \\
+$\ldots$
+
+\end{tabular}
+\end{frame}
+
+\begin{frame}{The Problem}
+Attempt 2: two programs are $S$-equivalent if they \textbf{cannot be told apart} after $S$ steps.
+\\~\\
+Which inputs?
+\pause 
+\\~\\
+Try some inputs by hand: low coverage, fast (unit tests)
+\pause
+\\~\\
+Try all $2^{64}$values of $\$1$ and $\$2$: high coverage, slow (but decidable)
+\pause
+\\~\\
+\textbf{Tamarin}: use concolic testing to check if the programs are disequivalent
 \end{frame}
 
 \end{document}
