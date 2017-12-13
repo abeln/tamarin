@@ -10,6 +10,7 @@
 \usepackage{url}
 \usetikzlibrary{shapes,backgrounds,arrows, fit, positioning}
 \usepackage{algpseudocode}
+%\usepackage{natbib}  
 
 \newcommand{\crule}[3][black]{\textcolor{#1}{\rule{#2}{#3}}}
 
@@ -678,25 +679,25 @@ Tamarin is still very much a work-in-progress. Below we list some of the outstan
 \subsubsection{Experiments} As mentioned in Section \ref{evalsect}, we would like to run Tamarin with compiler-generated MIPS programs, to test scalability and real-world use. This would be easier to do if we could generate data structures, since many programs take more two integers as input.
 
 \section{Related Work}
-We now survey some of the existing literature on program equivalence that is relevant to the project. In general, many tools have been built for checking program equivalence, differing on the language they target (high level vs assembly), their level of generality (one-off tools vs frameworks or even intermediate languages that serve as the backend for multiple tools), the language features they support (loops vs loop unrolling) and their soundness and completeness guarantees (concolic testing based tools vs complete exploration of a bounded search space).
+We now survey some of the existing literature on program equivalence that is relevant to the project. In general, many tools have been built for checking program equivalence, differing on the language they target (high level vs assembly), their level of generality (one-off tools vs frameworks or even intermediate languages that serve as the backend for multiple tools), the language features they support (loops vs loop unrolling) and their soundness and completeness guarantees (concolic testing based tools vs complete exploration of a bounded search space). However, we were not able to find a tool that both does program equivalence and works with raw assembly programs.
 
-\begin{itemize}
-\item \cite{hawblitzel2013will} is probably the most relevant reference. They verify compiler correctness by checking program equivalence of emitted assembly code. They use x86, Boogie, and SymDiff, much in the same way we would like to do for this project.
-\item \cite{lahiri2012symdiff} is also very relevant. They built SymDiff, a tool built on top of Boogie to test for program equivalence. It is unclear if we will be able to use it, though, since the released repository seems somewhat abandoned.
-\item \cite{barnett2005boogie} present Boogie, an intermediate verification language that can be targeted as an IR for program verification tasks.
-\item \cite{ramos2011practical} present UC-KLEE, which given two C functions checks whether they are equivalent (up to a fixed input size of 8 bytes). Their notion of equivalence considers not only function return values, but also memory locations reachable from them. UC-KLEE is built on top of KLEE. As far as we can tell, UC-KLEE was never released publicly.
-\item \cite{cadar2008klee} is another popular ``backend'' for program verification tasks. It implements a symbolic VM for LLVM bitcode.
-\item \cite{egele2014blanket} use \emph{Blanket Execution} to identify portions of program binaries that are ``'similar', based on randomized testing and having similar side-effects.
-\item \cite{partush2013abstract} use abstract interpretation to prove program equivalence for numerical programs.
-\item \cite{yang2014property} show how verify that manually-annotated program properties continue to hold as a program evolves.
-\item \cite{necula2000translation} verifies equivalence of IRs before and after compiler passes.
-\item \cite{francesco2014grease} present GreASE, which focuses on non-equivalence checking.
-\item \cite{sharma2013data} are able to check equivalence of x86 loops, unlike most of the other tools, which need to unroll loops.
-\item \cite{person2011directed} combine static analysis and symbolic execution for program equivalence.
-\end{itemize}
+The two ecosystems of tools most relevant to our work are KLEE and Boogie.
+
+\subsubsection{KLEE}
+
+\cite{cadar2008klee}  introduced KLEE, which is now a popular backend for program verification tasks. It implements a symbolic VM for LLVM bitcode. However, unlike Tamarin, the input to KLEE is at the C level. \cite{ramos2011practical} build UC-KLEE on top of KLEE. Given two C functions, UC-KLEE checks whether they are equivalent (up to a fixed input size of 8 bytes). Their notion of equivalence considers not only function return values, but also memory locations reachable from them. As far as we can tell, UC-KLEE was never released publicly.
+
+\subsubsection{Boogie}
+
+\cite{barnett2005boogie} present Boogie, an intermediate verification language that can be targeted as an IR for program verification tasks. \cite{lahiri2012symdiff} built SymDiff on top of Boogie to test for program equivalence. However, even though Boogie can encode MIPS, SymDiff requires that procedures in the two compared programs be given in pairs via a pre-established correspondence. This is so that Boogie can reason about one procedure at a time, making conservative assumptions about the state of the other procedures. This makes it unclear whether SymDiff could be used to verify equivalence of arbitrary MIPS programs whose structures we do not know a-priori. \cite{hawblitzel2013will} verify compiler correctness by checking program equivalence of emitted assembly code. They use x86, Boogie, and SymDiff.
+
+\subsubsection{Other related work}
+
+\cite{person2011directed} combine static analysis and symbolic execution for program equivalence. \cite{egele2014blanket} use \emph{Blanket Execution} to identify portions of program binaries that are ``'similar', based on randomized testing and having similar side-effects. \cite{partush2013abstract} use abstract interpretation to prove program equivalence for numerical programs. \cite{yang2014property} show how verify that manually-annotated program properties continue to hold as a program evolves. \cite{necula2000translation} verifies equivalence of IRs before and after compiler passes. \cite{francesco2014grease} present GreASE, which focuses on non-equivalence checking. \cite{sharma2013data} are able to check equivalence of x86 loops, unlike most of the other tools, which need to unroll loops.
+
 \section{Conclusions}
 
-\bibliographystyle{plain}
+\bibliographystyle{apalike}
 \bibliography{refs}
 
 
