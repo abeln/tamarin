@@ -613,12 +613,25 @@ In keeping with registers being represented as 32-bit bitvectors, Tamarin repres
 \noindent \lstinline{lw $t, i, $s} \hspace{2cm} \lstinline{(assert (= r_t (select mem_last (bvadd i r_s))))} \\
 \lstinline{sw $t, i, $s} \hspace{2.07cm} \lstinline{(assert (= mem_k+1 (store mem_k (bvadd i r_s) r_t))}
 
-Notice how memory is also immutable: every \textsf{store} (\lstinline{sw}) operation returns a new array (memory), and every \textsf{select} (\lstinline{lw}) uses the latest memory constant .
+Notice how memory is also immutable: every \textsf{store} (\lstinline{sw}) operation returns a new memory constant (an array), and every \textsf{select} (\lstinline{lw}) uses the latest memory constant .
 
 \subsection{Concolic Execution Redux}
 \label{redux}
 
-Alternation. Compatibility. Soundness/Completeness. Efficiency.
+As mentioned before, the \textsf{Concolic} module implements the concolic execution engine and orchestrates the interactions between all modules.
+We already presented the general structure in Figure \ref{concolicalgo}, but below we expand on some additional points.
+
+\subsubsection{Alternation}
+
+The main difference between Tamarin and a traditional concolic execution engine is that Tamarin needs to maintain state for the two programs it is comparing, and opposed to just one. Therefore, we represent the engine state with a tuple $(trace_1, trace_2, turn)$ of the last-executed trace for each program, together with a pointer to the last-run program. At every iteration, we use $turn$ to choose the program that is next in line for execution, and use the corresponding $trace_i$ to identify the last path-condition (and the corresponding inputs) that has not been previously negated. The programs are run on the new inputs, their traces recorded, and a new state $(trace_1', trace_2', turn')$ generated.
+
+\subsubsection{Bounded DFS}
+
+\subsubsection{Comparing Results}
+
+\subsubsection{Soundness and Completeness}
+
+\subsubsection{Efficiency}
 
 \section{Evaluation}
 
