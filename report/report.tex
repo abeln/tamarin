@@ -606,7 +606,14 @@ Once all constant declarations and assertions have been specified, we can query 
 
 Which indeed is a solution (albeit not one a human would have picked), because it makes \lstinline{slt $4, $1, $2} assign $0$ to $\$4$, which skips the branch.
 
-\subsubsection{Memory Representation}
+\subsubsection{Memory Representation} 
+
+In keeping with registers being represented as 32-bit bitvectors, Tamarin represents memory itself as an array of bitvectors. Below we show the translations of the \lstinline{sw} and \lstinline{lw} instructions:
+
+\noindent \lstinline{lw $t, i, $s} \hspace{2cm} \lstinline{(assert (= r_t (select mem_last (bvadd i r_s))))} \\
+\lstinline{sw $t, i, $s} \hspace{2.07cm} \lstinline{(assert (= mem_k+1 (store mem_k (bvadd i r_s) r_t))}
+
+Notice how memory is also immutable: every \textsf{store} (\lstinline{sw}) operation returns a new array (memory), and every \textsf{select} (\lstinline{lw}) uses the latest memory constant .
 
 \subsection{Concolic Execution Redux}
 \label{redux}
