@@ -61,7 +61,7 @@ University of Waterloo\\
 \maketitle
 
 \begin{abstract}
-Given two MIPS programs, when are they (dis)equivalent? At first glance, this is tricky to define, because of the unstructured nature of assembly code. We propose the use of alternating concolic execution to detect whether two programs are disequivalent. We have implemented our approach in a tool called Tamarin, which includes a MIPS emulator instrumented to record symbolic traces, as well as a concolic execution engine that integrates with the Z3 solver. We show that Tamarin is able to reason about program disequivalence in a number of scenarios, without any a-priori knowledge about the MIPS programs under consideration.
+Given two MIPS programs, when are they equivalent? At first glance, this is tricky to define, because of the unstructured nature of assembly code. We propose the use of alternating concolic execution to detect whether two programs are disequivalent. We have implemented our approach in a tool called Tamarin, which includes a MIPS emulator instrumented to record symbolic traces, as well as a concolic execution engine that integrates with the Z3 solver. We show that Tamarin is able to reason about program disequivalence in a number of scenarios, without any a-priori knowledge about the MIPS programs under consideration.
 \end{abstract}
 
 \section{Introduction}
@@ -168,11 +168,13 @@ $\forall S, P_1, P_2$, $\pequiv{P_1}{P_2} \implies \pmequiv{P_1}{P_2}{S}$.
 \end{lemma}
 
 \begin{proof}
-Let $\pequiv{P_1}{P_2}$. Then we have one of two cases:
+Let $\pequiv{P_1}{P_2}$. Consider two arbitrary inputs $x$ and $y$. Then we have one of two cases:
 \begin{itemize}
-\item Either $P_1$ or $P_2$ (or both) do not stop within S steps. Then by definition $\pmequiv{P_1}{P_2}{S}$.
-\item Both $P_1$ and $P_2$ stop within S steps. Then because they are equivalent, we know that they either fail with an error, or both stop with the same output. In either case, $\pmequiv{P_1}{P_2}{S}$.
+\item Either $P_1$ or $P_2$ (or both) do not stop within S steps when run on $x$ and $y$. This is the first case in the definition of $\merel{S}$.
+\item Both $P_1$ and $P_2$ stop within S steps. Then because they are equivalent, we know that they either fail with an error, or both stop with the same output. These are the second and third cases in the definition of $\merel{S}$.
 \end{itemize}
+
+Therefore, we must have $\pmequiv{P_1}{P_2}{S}$.
 \end{proof}
 
 \begin{corollary}
@@ -189,7 +191,7 @@ Corollary \ref{soundness} can be used to argue the soundness (with respect to $\
 \section{Concolic Disequivalence}
 \label{ideasection}
 
-We know from Corollary \ref{soundness} that any relation that under-approximates $\cancel{\merel{S}}$ is sound. Figure \ref{hierarchy}  shows why want an under-approximation: efficiency. $\cancel{\erel}$ captures the class of programs that are disequivalent, but is undecidable. $\cancel{\merel{S}}$ is decidable, but likely cannot be computed efficiently. Therefore, we look for a subset of $\cancel{\merel{S}}$ (an under-approximation) that can be efficiently computed.
+We know from Corollary \ref{soundness} that any relation that under-approximates $\cancel{\merel{S}}$ is sound. Figure \ref{hierarchy}  shows why we want an under-approximation: efficiency. $\cancel{\erel}$ captures the class of programs that are disequivalent, but is undecidable. $\cancel{\merel{S}}$ is decidable, but likely cannot be computed efficiently. Therefore, we look for a subset of $\cancel{\merel{S}}$ (an under-approximation) that can be efficiently computed.
 
 \begin{figure}
 \def\firstcircle{(0,-1.8cm) circle (1.2cm)}
@@ -276,7 +278,7 @@ end:
 \end{lstlisting}
 \end{multicols}
 
-Figure \ref{algoruns} summarizes the state of the algorithm as it compares $P_1$ and $P_2$. First, notice how the driver and verifier roles flip between $P_1$ and $P_2$ in consecutive runs. Every row indicates the input values, as well as the outputs $R_D$ and $R_V$ of the driver and verifier, respectively. At every run, we also record the path taken by the driver. Path conditions are negated to make sure we explore new paths in every iteration. In the fourth iteration, we can see of compare finds that the input pair $\$1 = 1, \$2 = 100$ leads to different outputs in the driver and verifier. At this point, $P_1$ and $P_2$ are declared as disequivalent. 
+Figure \ref{algoruns} summarizes the state of the algorithm as it compares $P_1$ and $P_2$. First, notice how the driver and verifier roles flip between $P_1$ and $P_2$ in consecutive runs. Every row indicates the input values, as well as the outputs $R_D$ and $R_V$ of the driver and verifier, respectively. At every run, we also record the path taken by the driver. Path conditions are negated to make sure we explore new paths in every iteration. In the fourth iteration, we can see that compare finds that the input pair $\$1 = 1, \$2 = 100$ leads to different outputs in the driver and verifier. At this point, $P_1$ and $P_2$ are declared as disequivalent. 
 
 Notice that in order to uncover the different, it is necessary to concolically explore the paths in both $P_1$ and $P_2$, and not only of $P_1$. In Figure \ref{algoruns}, runs 1 and 3 explore both branches of the conditional jump in $P_1$, but they exercise the same path in $P_2$. Only after we also execute $P_2$ do we find a counterexample to equivalence.
 
