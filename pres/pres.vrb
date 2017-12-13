@@ -1,37 +1,38 @@
-\frametitle{Idea}
+\frametitle{Tamarin (Overview)}
+\tikzstyle{block} = [rectangle, draw, fill=blue!20,
+    text width=3em, text centered, rounded corners, minimum height=2em]
+    \tikzstyle{mainblock} = [rectangle, draw, fill=green!20,
+    text width=3.3em, text centered, rounded corners, minimum height=2em]
+\tikzstyle{line} = [draw, -latex']
+%\tikzstyle{cloud} = [draw, ellipse,fill=red!20, node distance=3cm,
+%    minimum height=2em]
 
-Alternating concolic execution
+\begin{tikzpicture}[node distance = 1.5cm, auto]
+    % Place nodes
+    \node [mainblock] (concolic) {Concolic};
+    \node [block, left of=concolic, node distance=5cm] (cpu) {CPU};
+    \node [block, above of=concolic, right of=concolic, node distance=2cm] (trace) {Trace};
+    \node [block, below of=trace, right of=trace, node distance=2.5cm] (query) {Query};
+    \node [block, fill=red!20, below of=query, left of=query, node distance=3cm] (z3) {Z3};
+    \node [draw=black, dashed, fit= (concolic) (cpu) (trace) (query)] {};
+    \node at (-5.3, 3) {Tamarin};
 
-\begin{multicols}{2}
-\begin{lstlisting}[escapeinside={(*}{*)}]
-# P_1
-  bne $1, 42, end
-  add $3, $3, $0
-end:
-  add $3, $1, $2
-\end{lstlisting}
-\vfill\null
-\columnbreak
-\begin{lstlisting}
-# P_2
-  add $3, $1, $2
-  bne $2, 100, end
-  add $3, $3, $2
-end:
-\end{lstlisting}
-\end{multicols}
-
-\pause
-
-\begin{tabular}{l | l | l | l | l | l | l | l}
-Run & Driver & Verifier & $\$1$ & $\$2$ & Path & $R_D$ & $R_V$ \\
-\hline
-\pause
-1 & $P_1$ & $P_2$ & 1 & 1 & $\$1 \neq 42$ & 2 & 2 \\
-\pause
-2 & $P_2$ & $P_1$ & 1 & 1 & $\$2 \neq 100$ & 2 & 2\\
-\pause
-3 & $P_1$ & $P_2$ & 42 & 1 & $\$1 = 42$ & 2 & 2 \\
-\pause
-4 & $P_2$ & $P_1$ & 1 & 100 & $\$2 = 100$ & \textcolor{red}{201} & \textcolor{red}{2}
-\end{tabular}
+%    % Draw edges
+    \draw [line] (concolic) -- (cpu) node [midway, fill=white] {program};
+%    \draw [-latex, bend left, dashed] (cpu) edge (concolic);
+    \draw  (cpu)  edge [-latex, dashed, bend left=20] node[midway] {trace} (concolic);
+    \draw [line] (concolic) -- (trace) node [midway]{trace};
+    \draw [line] (trace) -- (query) node [midway]{modified trace};
+    \draw [-latex, dashed] (query) -- (concolic) node [midway]{new path};
+    \draw [line] (query) -- (z3) node [midway]{formula};
+    \draw [-latex, dashed] (z3) edge [-latex, dashed, bend left=20] node[midway]{model} (query);
+%    \path [line] (init) -- (identify);
+%    \path [line] (identify) -- (evaluate);
+%    \path [line] (evaluate) -- (decide);
+%    \path [line] (decide) -| node [near start] {yes} (update);
+%    \path [line] (update) |- (identify);
+%    \path [line] (decide) -- node {no}(stop);
+%    \path [line,dashed] (expert) -- (init);
+%    \path [line,dashed] (system) -- (init);
+%    \path [line,dashed] (system) |- (evaluate);
+\end{tikzpicture}

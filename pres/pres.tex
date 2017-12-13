@@ -153,6 +153,18 @@ $\ldots$
 \end{frame}
 
 \begin{frame}{The Problem}
+\begin{lemma}
+Equivalence implies $S$-equivalence.
+\end{lemma}
+
+\pause
+~\\
+\begin{corollary}[Soundness]
+If two programs are not $S$-equivalent (for any $S$), then they are not equivalent.
+\end{corollary}
+\end{frame}
+
+\begin{frame}{The Problem}
 Attempt 2: two programs are $S$-equivalent if they \textbf{cannot be told apart} after $S$ steps.
 \\~\\
 Which inputs?
@@ -206,5 +218,70 @@ Run & Driver & Verifier & $\$1$ & $\$2$ & Path & $R_D$ & $R_V$ \\
 \end{tabular}
 \end{frame}
 
+\normalsize
+
+\begin{frame}{Tamarin (Overview)}
+\begin{tikzpicture}[remember picture,overlay]
+
+\node [draw] at (5,0) (tam) {Tamarin};
+\node at (2, 0.5) (p1) {$P_1$};
+\node at (2, -0.5) (p2) {$P_2$};
+\node at (9, 0.5) (equiv) {$S$-equivalent};
+\node at (9, -0.5) (neq) {not equivalent};
+
+
+\draw [-latex] (p1) -- (tam);
+\draw [-latex] (p2) -- (tam);
+\draw [-latex,dashed] (tam) -- (equiv);
+\draw [-latex,dashed] (tam) -- (neq);
+
+\end{tikzpicture}
+\end{frame}
+
+\begin{frame}[fragile]{Tamarin (Overview)}
+% Taken from http://www.texample.net/tikz/examples/simple-flow-chart/
+% Define block styles
+%\tikzstyle{decision} = [diamond, draw, fill=blue!20, 
+%    text width=4.5em, text badly centered, node distance=3cm, inner sep=0pt]
+\tikzstyle{block} = [rectangle, draw, fill=blue!20, 
+    text width=3em, text centered, rounded corners, minimum height=2em]
+    \tikzstyle{mainblock} = [rectangle, draw, fill=green!20, 
+    text width=3.3em, text centered, rounded corners, minimum height=2em]
+\tikzstyle{line} = [draw, -latex']
+%\tikzstyle{cloud} = [draw, ellipse,fill=red!20, node distance=3cm,
+%    minimum height=2em]
+    
+\begin{tikzpicture}[node distance = 1.5cm, auto]
+    % Place nodes
+    \node [mainblock] (concolic) {Concolic};
+    \node [block, left of=concolic, node distance=5cm] (cpu) {CPU};
+    \node [block, above of=concolic, right of=concolic, node distance=2cm] (trace) {Trace};
+    \node [block, below of=trace, right of=trace, node distance=2.5cm] (query) {Query};
+    \node [block, fill=red!20, below of=query, left of=query, node distance=3cm] (z3) {Z3};
+    \node [draw=black, dashed, fit= (concolic) (cpu) (trace) (query)] {};
+    \node at (-5.3, 3) {Tamarin};
+    
+%    % Draw edges
+    \draw [line] (concolic) -- (cpu) node [midway, fill=white] {program};
+%    \draw [-latex, bend left, dashed] (cpu) edge (concolic);
+    \draw  (cpu)  edge [-latex, dashed, bend left=20] node[midway] {trace} (concolic);
+    \draw [line] (concolic) -- (trace) node [midway]{trace};
+    \draw [line] (trace) -- (query) node [midway]{modified trace};
+    \draw [-latex, dashed] (query) -- (concolic) node [midway]{new path};
+    \draw [line] (query) -- (z3) node [midway]{formula};
+    \draw [-latex, dashed] (z3) edge [-latex, dashed, bend left=20] node[midway]{model} (query);
+%    \path [line] (init) -- (identify);
+%    \path [line] (identify) -- (evaluate);
+%    \path [line] (evaluate) -- (decide);
+%    \path [line] (decide) -| node [near start] {yes} (update);
+%    \path [line] (update) |- (identify);
+%    \path [line] (decide) -- node {no}(stop);
+%    \path [line,dashed] (expert) -- (init);
+%    \path [line,dashed] (system) -- (init);
+%    \path [line,dashed] (system) |- (evaluate);
+\end{tikzpicture}
+\end{frame}
+
+\Large
 
 \end{document}
