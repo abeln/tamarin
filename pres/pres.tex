@@ -1,0 +1,49 @@
+\documentclass[pdf]{beamer}
+\mode<presentation>{}
+
+\usepackage{xcolor}
+\usepackage{tikz}   
+
+%% preamble
+\title{Tamarin: Concolic Disequivalence for MIPS}
+
+\author{Abel Nieto}
+\date{}
+
+\newcommand{\crule}[3][black]{\textcolor{#1}{\rule{#2}{#3}}}
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}{A Tale of Two Boxes}
+~\\
+\crule{3cm}{3cm} \hspace{2cm} \crule{3cm}{3cm}
+\end{frame}
+
+\begin{frame}{A Tale of Two Boxes}
+\hspace{3.5cm}\fbox{\includegraphics[width=1cm]{carrot}}
+\\
+\crule{3cm}{3cm} \hspace{2cm} \crule{3cm}{3cm}
+\pause
+\\
+nom nom
+\pause
+\hspace{3.5cm}
+nom nom
+\pause
+\\
+\hspace{3.5cm}
+{\Huge $=$}
+\end{frame}
+
+\begin{frame}{A Tale of Two Boxes}
+~\\
+\fbox{\includegraphics[width=3cmcm]{camel}} \hspace{2cm} \fbox{\includegraphics[width=3cm]{beaver}}
+\\
+\hspace{5cm} {\Huge $\neq$}
+\end{frame}
+
+\end{document}
