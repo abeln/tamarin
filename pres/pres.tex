@@ -403,4 +403,46 @@ $z_1 = 9 \land x_2 = 3$
 $(x_1 = 6 \land y_1 = 3)$
 \end{frame}
 
+\begin{frame}[fragile]{Query}
+\begin{tikzpicture}[remember picture,overlay]
+\node [draw] at (5,0) (query) {Query};
+\node at (2, 0) (tr) {trace};
+\node at (8, 0) (lf) {formula};
+
+\draw [-latex] (tr) -- (query);
+\draw [-latex] (query) -- (lf);
+\end{tikzpicture}
+\end{frame}
+
+\begin{frame}[fragile]{Query}
+\normalsize
+trace:
+\begin{lstlisting}
+  add $3, $1, $2
+  slt $4, $1, $2
+  add $5, $1, $0
+  $4 != $5
+\end{lstlisting}
+
+\pause
+~\\
+
+formula (SMT-LIB):
+\begin{lstlisting}[language=Lisp, escapeinside=||]
+(declare-const r0 (_ BitVec 32))
+(declare-const r1 (_ BitVec 32))
+... |\pause|
+(assert (= r3 (bvadd r1 r2))) |\pause|
+(assert
+  (= r4 (ite (bvslt r1 r2)
+    (_ bv1 32)
+    (_ bv0 32)))) |\pause|
+(assert (= r5 (_ bv1 32))) |\pause|
+(assert (not (= r4 r5))) |\pause|
+
+(check-sat)
+(get-model)
+\end{lstlisting}
+\end{frame}
+
 \end{document}
