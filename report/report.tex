@@ -12,6 +12,16 @@
 \usepackage{algpseudocode}
 %\usepackage{natbib}  
 
+\usepackage{geometry}
+\geometry{
+  a4paper,         % or letterpaper
+  textwidth=12.9cm,  % llncs has 12.2cm
+  textheight=20cm, % llncs has 19.3cm
+  heightrounded,   % integer number of lines
+  hratio=1:1,      % horizontally centered
+  vratio=2:3,      % not vertically centered
+}
+
 \newcommand{\crule}[3][black]{\textcolor{#1}{\rule{#2}{#3}}}
 
 \newcommand{\erel}{\textsf{equiv}}
@@ -43,6 +53,8 @@
 University of Waterloo\\
 \email{anietoro@uwaterloo.ca}
 }
+
+\pagestyle{plain}
 
 \begin{document}
 
@@ -437,7 +449,7 @@ Internally, \textsf{Transform} consists of multiple phases, each of type \lstinl
 
 \subsubsection{Desugaring}
 
- The desugaring phase removes ``complicated'' instructions by replacing them with simpler ones. Table \ref{desugar} summarizes some of the transformations.
+ The desugaring phase removes ``complicated'' instructions by replacing them with simpler ones. Figure \ref{desugar} summarizes some of the transformations.
  
 \begin{figure}
 \begin{tabular}{l | l}
@@ -614,7 +626,7 @@ Which indeed is a solution (albeit not one a human would have picked), because i
 In keeping with registers being represented as 32-bit bitvectors, Tamarin represents memory itself as an array of bitvectors. Below we show the translations of the \lstinline{sw} and \lstinline{lw} instructions:
 
 \noindent \lstinline{lw $t, i, $s} \hspace{2cm} \lstinline{(assert (= r_t (select mem_last (bvadd i r_s))))} \\
-\lstinline{sw $t, i, $s} \hspace{2.07cm} \lstinline{(assert (= mem_k+1 (store mem_k (bvadd i r_s) r_t))}
+\lstinline{sw $t, i, $s} \hspace{2cm} \lstinline{(assert (= mem_k+1 (store mem_k (bvadd i r_s) r_t))}
 
 Notice how memory is also immutable: every \textsf{store} (\lstinline{sw}) operation returns a new memory constant (an array), and every \textsf{select} (\lstinline{lw}) uses the latest memory constant .
 
