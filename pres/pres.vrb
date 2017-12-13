@@ -1,43 +1,24 @@
-\frametitle{Tamarin (Overview)}
-\tikzstyle{block} = [rectangle, draw, fill=blue!20,
-    text width=3em, text centered, rounded corners, minimum height=2em]
-    \tikzstyle{mainblock} = [rectangle, draw, fill=green!20,
-    text width=3.3em, text centered, rounded corners, minimum height=2em]
-\tikzstyle{line} = [draw, -latex']
-%\tikzstyle{cloud} = [draw, ellipse,fill=red!20, node distance=3cm,
-%    minimum height=2em]
-
+\frametitle{CPU}
 \begin{tikzpicture}[node distance = 1.5cm, auto]
-    % Place nodes
-    \node [mainblock] (concolic) {Concolic};
-    \pause
-    \node [block, left of=concolic, node distance=5cm] (cpu) {CPU};
-    \pause
-    \draw [line] (concolic) -- (cpu) node [midway, fill=white] {program};
-    \pause
-    \draw  (cpu)  edge [-latex, dashed, bend left=20] node[midway] {trace} (concolic);
-    \pause
+\node [draw] (fetch) {Fetch};
+\pause
+\node [draw, below of=fetch, right of=fetch] (decode) {Decode};
+\draw [-latex] (fetch) -- (decode) node [midway] {word$_n$};
 
-    \node [block, above of=concolic, right of=concolic, node distance=2cm] (trace) {Trace};
-    \pause
-    \draw [line] (concolic) -- (trace) node [midway]{trace};
-    \pause
+\pause
+\node [draw, below of=decode, left of=decode] (execute) {Execute};
+\draw [-latex] (decode) -- (execute) node [midway] {instr$_n$};
 
-    \node [block, below of=trace, right of=trace, node distance=2.2cm] (query) {Query};
-    \pause
-    \draw [line] (trace) -- (query) node [midway]{modified trace};
-    \pause
+\pause
+\draw [-latex, bend left=50] (execute) edge (fetch);
 
-    \node [block, fill=red!20, below of=query, left of=query, node distance=3cm] (z3) {Z3};
-    \pause
-    \draw [line] (query) -- (z3) node [midway]{formula};
-    \pause
-    \draw [-latex, dashed] (z3) edge [-latex, dashed, bend left=20] node[midway]{model} (query);
-    \pause
-    \draw [-latex, dashed] (query) -- (concolic) node [midway]{new path};
+\pause
+\node [draw, right=2cm of decode] (symb) {MakeSymbolic};
+\node [draw, right=2cm of symb, minimum height=3cm, text width=1.15cm] (trace) {};
+\node [below right, text width=1cm] at (trace.north west) {Trace symb$_1$ symb$_2$ $\ldots$ symb$_{n - 1}$ \textcolor{blue}{symb$_n$}};
+\pause
 
-    \pause
-    \node [draw=black, dashed, fit= (concolic) (cpu) (trace) (query)] {};
-    \node at (-5.3, 3) {Tamarin};
-
+\draw [-latex] (decode) -- (symb) node [midway] {instr$_n$};
+\pause
+\draw [-latex] (symb) -- (trace) node [midway] {symb$_n$};
 \end{tikzpicture}

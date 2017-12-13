@@ -288,9 +288,45 @@ Run & Driver & Verifier & $\$1$ & $\$2$ & Path & $R_D$ & $R_V$ \\
 \end{tikzpicture}
 \end{frame}
 
-\Large
+\normalsize
 
-\begin{frame}{CPU}
+\begin{frame}[fragile]{CPU}
+\begin{tikzpicture}[node distance = 1.5cm, auto]
+\node [draw] (fetch) {Fetch};
+\pause
+\node [draw, below of=fetch, right of=fetch] (decode) {Decode};
+\draw [-latex] (fetch) -- (decode) node [midway] {word$_n$};
+
+\pause
+\node [draw, below of=decode, left of=decode] (execute) {Execute};
+\draw [-latex] (decode) -- (execute) node [midway] {instr$_n$};
+
+\pause
+\draw [-latex, bend left=50] (execute) edge (fetch);
+
+\pause
+\node [draw, right=2cm of decode] (symb) {MakeSymbolic};
+\node [draw, right=2cm of symb, minimum height=3cm, text width=1.15cm] (trace) {};
+\node [below right, text width=1cm] at (trace.north west) {Trace symb$_1$ symb$_2$ $\ldots$ symb$_{n - 1}$ \textcolor{blue}{symb$_n$}};
+\pause
+
+\draw [-latex] (decode) -- (symb) node [midway] {instr$_n$};
+\pause
+\draw [-latex] (symb) -- (trace) node [midway] {symb$_n$};
+\end{tikzpicture}
 \end{frame}
+
+\begin{frame}{CPU (MakeSymbolic)}
+\begin{tabular}{l | l}
+Instruction & Symbolic \\
+\hline
+\pause
+\lstinline{add $3, $1, $2} & $r_3 \gets r_1 + r_2$ \\
+\pause
+\lstinline{beq $1, $2, label} & $r_1 = r_2$ or $r_1 \neq r_2$ \\
+\lstinline{add $3, $pc, $0} & $r_3 \gets \textsf{0x8BADF00D}$ \\
+\lstinline{lis $3; 42} & $$ $r_3 \gets 42$
+\end{tabular}
+\end{frame}{CPU}
 
 \end{document}
